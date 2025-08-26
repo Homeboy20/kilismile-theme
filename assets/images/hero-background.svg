@@ -1,0 +1,73 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2D5A41;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="lightGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.1);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Base Background -->
+  <rect width="1920" height="1080" fill="url(#heroGradient)" />
+  
+  <!-- Health Icons Pattern -->
+  <g opacity="0.05" fill="white">
+    <!-- Hearts -->
+    <path d="M200,200 C200,180 220,160 240,160 C260,160 280,180 280,200 C280,220 240,260 240,260 C240,260 200,220 200,200 Z" />
+    <path d="M500,300 C500,280 520,260 540,260 C560,260 580,280 580,300 C580,320 540,360 540,360 C540,360 500,320 500,300 Z" />
+    <path d="M800,150 C800,130 820,110 840,110 C860,110 880,130 880,150 C880,170 840,210 840,210 C840,210 800,170 800,150 Z" />
+    <path d="M1200,400 C1200,380 1220,360 1240,360 C1260,360 1280,380 1280,400 C1280,420 1240,460 1240,460 C1240,460 1200,420 1200,400 Z" />
+    <path d="M1500,250 C1500,230 1520,210 1540,210 C1560,210 1580,230 1580,250 C1580,270 1540,310 1540,310 C1540,310 1500,270 1500,250 Z" />
+    
+    <!-- Plus Signs -->
+    <rect x="300" y="500" width="40" height="8" />
+    <rect x="316" y="484" width="8" height="40" />
+    
+    <rect x="700" y="600" width="40" height="8" />
+    <rect x="716" y="584" width="8" height="40" />
+    
+    <rect x="1100" y="700" width="40" height="8" />
+    <rect x="1116" y="684" width="8" height="40" />
+    
+    <rect x="1400" y="550" width="40" height="8" />
+    <rect x="1416" y="534" width="8" height="40" />
+    
+    <!-- Stethoscopes -->
+    <circle cx="150" cy="700" r="15" fill="none" stroke="white" stroke-width="3" />
+    <circle cx="150" cy="730" r="8" fill="none" stroke="white" stroke-width="3" />
+    <path d="M150,685 Q150,650 180,650 Q210,650 210,685" fill="none" stroke="white" stroke-width="3" />
+    
+    <circle cx="950" cy="800" r="15" fill="none" stroke="white" stroke-width="3" />
+    <circle cx="950" cy="830" r="8" fill="none" stroke="white" stroke-width="3" />
+    <path d="M950,785 Q950,750 980,750 Q1010,750 1010,785" fill="none" stroke="white" stroke-width="3" />
+    
+    <!-- Teeth -->
+    <rect x="400" y="800" width="20" height="30" rx="10" />
+    <rect x="1300" y="150" width="20" height="30" rx="10" />
+    <rect x="600" y="100" width="20" height="30" rx="10" />
+  </g>
+  
+  <!-- Subtle Light Effects -->
+  <circle cx="480" cy="300" r="200" fill="url(#lightGradient)" />
+  <circle cx="1200" cy="600" r="300" fill="url(#lightGradient)" />
+  <circle cx="300" cy="800" r="150" fill="url(#lightGradient)" />
+  
+  <!-- Decorative Geometric Shapes -->
+  <g opacity="0.03" fill="white">
+    <polygon points="100,100 150,100 125,50" />
+    <polygon points="1700,200 1750,200 1725,150" />
+    <polygon points="200,900 250,900 225,850" />
+    <polygon points="1600,800 1650,800 1625,750" />
+    
+    <circle cx="1800" cy="400" r="25" />
+    <circle cx="100" cy="500" r="20" />
+    <circle cx="1700" cy="900" r="30" />
+    
+    <rect x="50" y="50" width="30" height="30" transform="rotate(45 65 65)" />
+    <rect x="1800" y="100" width="25" height="25" transform="rotate(45 1812 1112)" />
+    <rect x="1750" y="950" width="35" height="35" transform="rotate(45 1767 967)" />
+  </g>
+</svg>

@@ -13,7 +13,7 @@ get_header(); ?>
     <section class="fundraising-hero" style="background: var(--light-gray); color: var(--dark-green); padding: 120px 0 80px; text-align: center; border-bottom: 4px solid var(--primary-green);">
         <div class="container">
             <h1 style="font-size: 3.5rem; margin-bottom: 20px; color: var(--dark-green); font-weight: 700;">
-                <?php _e('Fundraising With Kili Smile', 'kilismile'); ?>
+                <?php _e('Fundraising With Kilismile', 'kilismile'); ?>
             </h1>
             <p style="font-size: 1.3rem; max-width: 800px; margin: 0 auto 40px; color: var(--text-secondary); line-height: 1.6;">
                 <?php _e('Join us in creating sustainable change through innovative fundraising initiatives that directly impact health education in Tanzania communities.', 'kilismile'); ?>
@@ -184,10 +184,26 @@ get_header(); ?>
     <!-- Current Campaigns -->
     <section class="current-campaigns" style="padding: 100px 0; background: var(--light-gray);">
         <div class="container">
-            <h2 style="text-align: center; color: var(--dark-green); font-size: 2.5rem; margin-bottom: 60px;">
+            <h2 style="text-align: center; color: var(--dark-green); font-size: 2.5rem; margin-bottom: 30px;">
                 <?php _e('Current Fundraising Campaigns', 'kilismile'); ?>
             </h2>
+            
+            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto;">
+                <i class="fas fa-calendar-check" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;" aria-hidden="true"></i>
+                <h3 style="color: var(--dark-green); margin-bottom: 15px; font-size: 1.8rem;">
+                    <?php _e('Campaigns Coming Soon', 'kilismile'); ?>
+                </h3>
+                <p style="color: var(--text-secondary); line-height: 1.8; max-width: 600px; margin: 0 auto 30px; font-size: 1.1rem;">
+                    <?php _e('We are currently planning several fundraising campaigns to support our programs and community initiatives. These campaigns will be announced soon. Stay connected with us through our social media channels and newsletter for updates.', 'kilismile'); ?>
+                </p>
+                <a href="<?php echo esc_url(home_url('/donate')); ?>" 
+                   style="display: inline-block; padding: 15px 40px; background: var(--primary-green); color: white; text-decoration: none; border-radius: 30px; font-weight: 600; transition: all 0.3s ease;">
+                    <?php _e('Support Our Work - Donate Now', 'kilismile'); ?>
+                </a>
+            </div>
 
+            <!-- Commented out campaigns for future use -->
+            <div style="display: none;">
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;">
                 <!-- Campaign 1 -->
                 <div class="campaign-card" style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
@@ -498,3 +514,5 @@ function learnMore() {
 </style>
 
 <?php get_footer(); ?>
+
+

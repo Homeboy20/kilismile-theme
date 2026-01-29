@@ -1,0 +1,68 @@
+/* Multi-step donation form styles (scoped)
+   Keeps the PHP template cleaner and improves caching.
+   Applies only when the template is rendered (selectors are scoped). */
+
+#kilismile-donation-form { box-sizing: border-box; }
+#kilismile-donation-form *,
+#kilismile-donation-form *::before,
+#kilismile-donation-form *::after { box-sizing: inherit; }
+
+#kilismile-donation-form .amount-btn:hover {
+  border-color: #28a745 !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.20);
+  transform: translateY(-2px);
+}
+
+#kilismile-donation-form .payment-method:hover {
+  border-color: #28a745 !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.20);
+}
+
+#kilismile-donation-form .form-step input:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.10);
+  outline: none;
+}
+
+#kilismile-donation-form .step-indicator.active .step-circle {
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.20);
+}
+
+/* Inline message area (replaces alert() for most validation errors) */
+#kilismile-donation-form .ks-form-message {
+  display: none;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+}
+#kilismile-donation-form .ks-form-message--show { display: block; }
+#kilismile-donation-form .ks-form-message--error { border-color: rgba(220, 53, 69, 0.30); }
+#kilismile-donation-form .ks-form-message--error strong { color: #dc3545; }
+#kilismile-donation-form .ks-form-message--success { border-color: rgba(40, 167, 69, 0.28); }
+#kilismile-donation-form .ks-form-message--success strong { color: #28a745; }
+
+@media (max-width: 768px) {
+  #kilismile-donation-form .form-content { padding: 30px 20px !important; }
+  #kilismile-donation-form #amount-grid-tzs,
+  #kilismile-donation-form #amount-grid-usd { grid-template-columns: repeat(2, 1fr) !important; }
+  #kilismile-donation-form .currency-selection > div { flex-direction: column !important; }
+  #kilismile-donation-form .form-progress > div { max-width: 300px !important; }
+}
+
+@media (max-width: 640px) {
+  #kilismile-donation-form .form-content { padding: 20px !important; }
+  #kilismile-donation-form .form-progress { padding: 14px !important; }
+  #kilismile-donation-form .amount-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  #kilismile-donation-form .payment-method { padding: 16px !important; }
+  #kilismile-donation-form .ks-donor-grid { grid-template-columns: 1fr !important; }
+  #kilismile-donation-form .ks-step-actions { flex-direction: column !important; }
+  #kilismile-donation-form .ks-step-actions > button { width: 100% !important; }
+}
+
+@media (max-width: 420px) {
+  #kilismile-donation-form .amount-grid { grid-template-columns: 1fr !important; }
+}

@@ -374,7 +374,7 @@ get_header(); ?>
                     <p style="margin-bottom: 20px; opacity: 0.9; font-size: 0.9rem;">
                         <?php _e('Help us continue our vital work in health education and community development.', 'kilismile'); ?>
                     </p>
-                    <a href="<?php echo esc_url(home_url('/donate')); ?>" 
+                    <a href="<?php echo esc_url(function_exists('kilismile_get_donation_page_url_legacy') ? kilismile_get_donation_page_url_legacy() : home_url('/donation/')); ?>" 
                        style="display: inline-block; padding: 12px 20px; background: white; color: var(--primary-green); text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
                         <?php _e('Donate Now', 'kilismile'); ?>
                     </a>
@@ -519,3 +519,5 @@ get_header(); ?>
 </style>
 
 <?php get_footer(); ?>
+
+

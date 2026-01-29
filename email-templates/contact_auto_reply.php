@@ -76,7 +76,7 @@
         </div>
         
         <div class="footer">
-            <p><strong>Kili Smile Organization</strong></p>
+            <p><strong>Kilismile Organization</strong></p>
             <p>"No health without oral health"</p>
             <p>Improving oral health in Tanzania through education, prevention, and community outreach.</p>
             <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
@@ -85,3 +85,5 @@
     </div>
 </body>
 </html>
+
+

@@ -89,55 +89,194 @@ get_header(); ?>
             <!-- Section Header -->
             <div class="section-header" style="text-align: center; margin-bottom: 50px;">
                 <h2 style="font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 15px; color: var(--dark-green); font-weight: 600; line-height: 1.3;">
-                    Our Mission Framework
+                    Mission, Vision & Objectives
                 </h2>
-                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.5;">
-                    A comprehensive approach to sustainable health improvements in Tanzania's communities.
+                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 760px; margin: 0 auto; line-height: 1.5;">
+                    Our guiding purpose, long-term vision, and the objectives that shape every program we deliver.
                 </p>
             </div>
 
-            <!-- Mission Cards -->
-            <div class="mission-grid-redesign" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <div class="mission-card-redesign" style="background: white; padding: 30px 25px; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; position: relative; overflow: hidden; border-left: 4px solid var(--primary-green);">
-                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                        <div style="width: 40px; height: 40px; background: var(--primary-green); border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                            <i class="fas fa-tooth" style="font-size: 1.2rem; color: white;"></i>
-                        </div>
-                        <h3 style="font-size: 1.3rem; color: var(--dark-green); margin: 0; font-weight: 600;">Health Education</h3>
-                    </div>
-                    <p style="color: var(--text-secondary); line-height: 1.5; margin-bottom: 15px; font-size: 0.95rem;">Providing oral and general health education to children and elderly in remote areas, ensuring access to essential health knowledge.</p>
-                    <div class="progress-bar" style="background: #E8F5E8; height: 6px; border-radius: 3px; overflow: hidden;">
-                        <div style="background: var(--primary-green); height: 100%; width: 85%;"></div>
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--primary-green); font-weight: 500; margin-top: 5px; display: block;">85% Implementation</span>
+            <!-- Preamble, Mission, Vision, Objectives -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px;">
+                <div style="background: #f2fbf2; padding: 28px; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); border: 1px solid rgba(76, 175, 80, 0.18);">
+                    <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; color: var(--primary-green); background: rgba(76, 175, 80, 0.12); padding: 6px 10px; border-radius: 999px; margin-bottom: 12px;">
+                        <i class="fas fa-seedling" aria-hidden="true"></i>
+                        Preamble
+                    </span>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin: 0 0 12px;">
+                        We, the members of KiliSmile Organization, believe that every person deserves the right to a healthy and dignified life. We are committed to improving community well-being by focusing on two key areas: promoting oral health among school-aged children and supporting elderly people living with non-communicable diseases.
+                    </p>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin: 0 0 12px;">
+                        For children, we work to ensure healthy smiles, confidence, and knowledge that last a lifetime. For the elderly, we provide care, education, and support that protect dignity, enhance quality of life, and encourage active aging.
+                    </p>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin: 0;">
+                        Guided by compassion, equity, prevention, and community empowerment, we strive to create lasting change through education, advocacy, and accessible health services—building a healthier and happier future for all generations.
+                    </p>
                 </div>
 
-                <div class="mission-card-redesign" style="background: white; padding: 30px 25px; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; position: relative; overflow: hidden; border-left: 4px solid var(--accent-green);">
-                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                        <div style="width: 40px; height: 40px; background: var(--accent-green); border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                            <i class="fas fa-chalkboard-teacher" style="font-size: 1.2rem; color: white;"></i>
-                        </div>
-                        <h3 style="font-size: 1.3rem; color: var(--dark-green); margin: 0; font-weight: 600;">Teacher Training</h3>
+                <div style="display: grid; gap: 22px;">
+                    <div style="background: #eef7ff; padding: 24px; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); border: 1px solid rgba(33, 150, 243, 0.15);">
+                        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; color: #2196F3; background: rgba(33, 150, 243, 0.12); padding: 6px 10px; border-radius: 999px; margin-bottom: 10px;">
+                            <i class="fas fa-bullseye" aria-hidden="true"></i>
+                            Mission
+                        </span>
+                        <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin: 0;">
+                            To improve the health and quality of life of children and elderly people through preventive healthcare, treatment services, health education, community outreach, advocacy, and the establishment and operation of sustainable health facilities, with special focus on oral health and non-communicable diseases among the elderly.
+                        </p>
                     </div>
-                    <p style="color: var(--text-secondary); line-height: 1.5; margin-bottom: 15px; font-size: 0.95rem;">Training primary school teachers on basic oral and general health, creating sustainable health advocates within communities.</p>
-                    <div class="progress-bar" style="background: #E8F5E8; height: 6px; border-radius: 3px; overflow: hidden;">
-                        <div style="background: var(--accent-green); height: 100%; width: 70%;"></div>
+                    <div style="background: #fff5ea; padding: 24px; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); border: 1px solid rgba(255, 152, 0, 0.2);">
+                        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 700; color: #ff9800; background: rgba(255, 152, 0, 0.15); padding: 6px 10px; border-radius: 999px; margin-bottom: 10px;">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                            Vision
+                        </span>
+                        <p style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; margin: 0;">
+                            A society where children and elderly people, including those living with non-communicable diseases, enjoy good health, dignity, and access to quality and affordable healthcare.
+                        </p>
                     </div>
-                    <span style="font-size: 0.8rem; color: var(--accent-green); font-weight: 500; margin-top: 5px; display: block;">70% Implementation</span>
+                </div>
+            </div>
+
+            <div style="background: #ffffff; padding: 28px; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); border: 1px solid rgba(76, 175, 80, 0.18); margin-top: 24px;">
+                <h3 style="margin: 0 0 15px; color: var(--dark-green); font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(76, 175, 80, 0.12); display: inline-flex; align-items: center; justify-content: center; color: var(--primary-green);">
+                        <i class="fas fa-list-check" aria-hidden="true"></i>
+                    </span>
+                    Objectives
+                </h3>
+                <ol style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; column-count: 2; column-gap: 30px;">
+                    <li>Promote access to quality and affordable healthcare for children and elderly persons.</li>
+                    <li>Conduct community health, dental, and non-communicable disease (NCD) screenings, including hypertension, diabetes, and cardiovascular conditions.</li>
+                    <li>Promote preventive healthcare, oral health lifestyles, and NCD prevention and management.</li>
+                    <li>Improve nutrition, growth, and development among children.</li>
+                    <li>Prevent, manage, and support elderly people living with non-communicable diseases including diabetes, hypertension, heart diseases, cancers, and other chronic conditions.</li>
+                    <li>Provide mental health and psychosocial support.</li>
+                    <li>Advocate for the rights, welfare, and protection of children and elderly people.</li>
+                    <li>Strengthen community health systems through partnerships and capacity building.</li>
+                    <li>Establish, own, manage, and operate health facilities including KiliSmile Dental Clinic (established April 2025) to provide treatment services and receive referrals from community screenings, school programs, and outreach activities.</li>
+                    <li>Train primary school teachers on basic oral and general health so they can transfer knowledge and preventive practices to children in schools.</li>
+                    <li>Facilitate referrals, treatment, follow-up, and continuity of care for patients identified during community health and NCD activities.</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- Programs Overview Section -->
+    <section class="programs-overview-section" style="padding: 60px 0; background: white;">
+        <div class="container">
+            <div class="section-header" style="text-align: center; margin-bottom: 45px;">
+                <h2 style="font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 15px; color: var(--dark-green); font-weight: 600; line-height: 1.3;">
+                    Our Core Programs
+                </h2>
+                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 760px; margin: 0 auto; line-height: 1.5;">
+                    Three focused programs deliver measurable health outcomes for children, educators, and elders across underserved communities.
+                </p>
+            </div>
+
+            <div class="programs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+                <div style="background: var(--light-gray); padding: 25px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.2rem; font-weight: 600;">School Oral Health</h3>
+                    <p style="color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; font-size: 0.95rem;">Interactive lessons, practical demonstrations, and supplies that build lifelong hygiene habits for pupils.</p>
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+                        <li>Brushing technique workshops</li>
+                        <li>Teacher-supported take-home routines</li>
+                        <li>Monitoring and follow-up visits</li>
+                    </ul>
                 </div>
 
-                <div class="mission-card-redesign" style="background: white; padding: 30px 25px; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; position: relative; overflow: hidden; border-left: 4px solid var(--light-green);">
-                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                        <div style="width: 40px; height: 40px; background: var(--light-green); border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                            <i class="fas fa-stethoscope" style="font-size: 1.2rem; color: white;"></i>
-                        </div>
-                        <h3 style="font-size: 1.3rem; color: var(--dark-green); margin: 0; font-weight: 600;">Health Screening</h3>
-                    </div>
-                    <p style="color: var(--text-secondary); line-height: 1.5; margin-bottom: 15px; font-size: 0.95rem;">Conducting comprehensive screening of non-communicable diseases for children and elderly, enabling early detection and intervention.</p>
-                    <div class="progress-bar" style="background: #E8F5E8; height: 6px; border-radius: 3px; overflow: hidden;">
-                        <div style="background: var(--light-green); height: 100%; width: 90%;"></div>
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--light-green); font-weight: 500; margin-top: 5px; display: block;">90% Implementation</span>
+                <div style="background: var(--light-gray); padding: 25px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.2rem; font-weight: 600;">Teacher Capacity Building</h3>
+                    <p style="color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; font-size: 0.95rem;">Training teachers to serve as health champions who reinforce positive behavior daily.</p>
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+                        <li>Health lesson toolkits</li>
+                        <li>Referral guidance and care pathways</li>
+                        <li>Community engagement strategies</li>
+                    </ul>
+                </div>
+
+                <div style="background: var(--light-gray); padding: 25px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.2rem; font-weight: 600;">Community Health Screening</h3>
+                    <p style="color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; font-size: 0.95rem;">Mobile screening services for elders and vulnerable groups to detect health issues early.</p>
+                    <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+                        <li>Blood pressure and glucose checks</li>
+                        <li>Oral health assessments</li>
+                        <li>On-site counseling and referrals</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 25px;">
+                <a href="<?php echo esc_url(home_url('/programs')); ?>" style="display: inline-flex; align-items: center; gap: 8px; background: var(--primary-green); color: white; padding: 12px 22px; border-radius: 4px; text-decoration: none; font-weight: 600;">
+                    Explore All Programs
+                    <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How We Work Section -->
+    <section class="how-we-work-section" style="padding: 60px 0; background: var(--light-gray);">
+        <div class="container">
+            <div class="section-header" style="text-align: center; margin-bottom: 45px;">
+                <h2 style="font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 15px; color: var(--dark-green); font-weight: 600; line-height: 1.3;">
+                    How We Deliver Impact
+                </h2>
+                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 760px; margin: 0 auto; line-height: 1.5;">
+                    A clear, repeatable approach keeps every outreach consistent, accountable, and community-led.
+                </p>
+            </div>
+
+            <div class="process-steps" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                <div style="background: white; padding: 22px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <div style="font-size: 0.85rem; color: var(--primary-green); font-weight: 700; margin-bottom: 8px;">Step 01</div>
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Needs Assessment</h3>
+                    <p style="margin: 0; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">We coordinate with schools, clinics, and local leaders to identify priority needs and locations.</p>
+                </div>
+                <div style="background: white; padding: 22px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <div style="font-size: 0.85rem; color: var(--primary-green); font-weight: 700; margin-bottom: 8px;">Step 02</div>
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Program Delivery</h3>
+                    <p style="margin: 0; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">Our teams conduct lessons, screenings, and training using standardized tools and reporting.</p>
+                </div>
+                <div style="background: white; padding: 22px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <div style="font-size: 0.85rem; color: var(--primary-green); font-weight: 700; margin-bottom: 8px;">Step 03</div>
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Follow-Up & Reporting</h3>
+                    <p style="margin: 0; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">We track outcomes, record referrals, and share insights with partners and donors.</p>
+                </div>
+                <div style="background: white; padding: 22px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <div style="font-size: 0.85rem; color: var(--primary-green); font-weight: 700; margin-bottom: 8px;">Step 04</div>
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Community Ownership</h3>
+                    <p style="margin: 0; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">Local champions continue health education between visits, ensuring sustainable impact.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Get Involved Section -->
+    <section class="get-involved-section" style="padding: 60px 0; background: white;">
+        <div class="container">
+            <div class="section-header" style="text-align: center; margin-bottom: 40px;">
+                <h2 style="font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 15px; color: var(--dark-green); font-weight: 600; line-height: 1.3;">
+                    Ways to Support KiliSmile
+                </h2>
+                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 760px; margin: 0 auto; line-height: 1.5;">
+                    Whether you give, volunteer, or partner with us, your support directly strengthens community health services.
+                </p>
+            </div>
+
+            <div class="support-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+                <div style="background: var(--light-gray); padding: 24px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Donate</h3>
+                    <p style="margin: 0 0 12px; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">Fund essential outreach supplies, transport, and screening kits for field teams.</p>
+                    <a href="<?php echo esc_url(home_url('/donations')); ?>" style="color: var(--primary-green); font-weight: 600; text-decoration: none;">Give now →</a>
+                </div>
+                <div style="background: var(--light-gray); padding: 24px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Volunteer</h3>
+                    <p style="margin: 0 0 12px; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">Join our field activities, training sessions, or administrative support efforts.</p>
+                    <a href="<?php echo esc_url(home_url('/contact')); ?>" style="color: var(--primary-green); font-weight: 600; text-decoration: none;">Get involved →</a>
+                </div>
+                <div style="background: var(--light-gray); padding: 24px; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                    <h3 style="margin: 0 0 10px; color: var(--dark-green); font-size: 1.1rem; font-weight: 600;">Partner</h3>
+                    <p style="margin: 0 0 12px; color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">Work with us on school programs, community outreach, or funding initiatives.</p>
+                    <a href="<?php echo esc_url(home_url('/about')); ?>" style="color: var(--primary-green); font-weight: 600; text-decoration: none;">Learn more →</a>
                 </div>
             </div>
         </div>
@@ -157,25 +296,25 @@ get_header(); ?>
 
             <div class="impact-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto;">
                 <div class="impact-item" style="text-align: center; background: white; padding: 15px; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid rgba(76, 175, 80, 0.1);">
-                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="500">0</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="780">780</div>
                     <div style="font-size: 0.9rem; color: var(--text-secondary);">Children Educated</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.8; margin-top: 5px;">Comprehensive health awareness</div>
                 </div>
 
                 <div class="impact-item" style="text-align: center; background: white; padding: 15px; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid rgba(76, 175, 80, 0.1);">
-                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="200">0</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="420">420</div>
                     <div style="font-size: 0.9rem; color: var(--text-secondary);">Elderly Supported</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.8; margin-top: 5px;">Health screening services</div>
                 </div>
 
                 <div class="impact-item" style="text-align: center; background: white; padding: 15px; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid rgba(76, 175, 80, 0.1);">
-                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="50">0</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="95">95</div>
                     <div style="font-size: 0.9rem; color: var(--text-secondary);">Teachers Trained</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.8; margin-top: 5px;">Health education advocates</div>
                 </div>
 
                 <div class="impact-item" style="text-align: center; background: white; padding: 15px; border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid rgba(76, 175, 80, 0.1);">
-                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="10">0</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; color: var(--primary-green);" data-count="18">18</div>
                     <div style="font-size: 0.9rem; color: var(--text-secondary);">Remote Communities</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.8; margin-top: 5px;">Areas receiving care</div>
                 </div>
@@ -198,7 +337,7 @@ get_header(); ?>
                         <div class="timeline-content" style="background: white; padding: 20px; border-radius: 4px; width: 45%; box-shadow: 0 3px 10px rgba(0,0,0,0.05); margin-right: auto; border-left: 3px solid var(--primary-green);">
                             <div class="timeline-year" style="color: var(--primary-green); font-weight: bold; font-size: 1rem; margin-bottom: 5px;">April 2024</div>
                             <h3 style="color: var(--dark-green); margin-bottom: 8px; font-size: 1.1rem;">Launch</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem;">Kili Smile Organization was officially registered with NGO number 07NGO/R/6067.</p>
+                            <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem;">Kilismile Organization was officially registered with NGO number 07NGO/R/6067.</p>
                         </div>
                         <div class="timeline-marker" style="position: absolute; left: 50%; width: 12px; height: 12px; background: var(--primary-green); border-radius: 50%; transform: translateX(-50%); border: 2px solid white; z-index: 1;"></div>
                     </div>
@@ -207,7 +346,7 @@ get_header(); ?>
                         <div class="timeline-content" style="background: white; padding: 20px; border-radius: 4px; width: 45%; box-shadow: 0 3px 10px rgba(0,0,0,0.05); margin-left: auto; border-left: 3px solid var(--primary-green);">
                             <div class="timeline-year" style="color: var(--primary-green); font-weight: bold; font-size: 1rem; margin-bottom: 5px;">May 2024</div>
                             <h3 style="color: var(--dark-green); margin-bottom: 8px; font-size: 1.1rem;">First Outreach</h3>
-                            <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem;">Conducted our first community health education program in Moshi Rural District.</p>
+                            <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem;">Conducted our first community health education program in Same District.</p>
                         </div>
                         <div class="timeline-marker" style="position: absolute; left: 50%; width: 12px; height: 12px; background: var(--primary-green); border-radius: 50%; transform: translateX(-50%); border: 2px solid white; z-index: 1;"></div>
                     </div>
@@ -470,6 +609,11 @@ get_header(); ?>
         </div>
     </section>
 
+    <!-- Partners Section -->
+    <?php if (function_exists('display_homepage_partner_logos')) : ?>
+        <?php display_homepage_partner_logos(); ?>
+    <?php endif; ?>
+
     <!-- Health Quotes Section -->
     <?php if (get_theme_mod('kilismile_show_health_quotes', true)) : ?>
     <section class="health-quotes-section" style="padding: 60px 0; background: white; position: relative;">
@@ -630,7 +774,7 @@ get_header(); ?>
                 <!-- Quick Contact -->
                 <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8);">
                     Questions? <a href="<?php echo esc_url(home_url('/contact')); ?>" style="color: var(--light-green); text-decoration: underline; font-weight: 500;">Get in touch</a> 
-                    or call us at <a href="tel:+255123456789" style="color: white; text-decoration: none; font-weight: 500;">+255 123 456 789</a>
+                    or call us at <a href="tel:+255763495575" style="color: white; text-decoration: none; font-weight: 500;">+255763495575/+255735495575</a>
                 </div>
             </div>
         </div>
@@ -921,7 +1065,8 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(counter);
     });
 });
-});
 </script>
 
 <?php get_footer(); ?>
+
+

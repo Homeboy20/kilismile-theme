@@ -42,7 +42,7 @@ get_header(); ?>
                 <?php _e('Why Volunteer With Us?', 'kilismile'); ?>
             </h2>
             <p style="text-align: center; color: var(--text-secondary); font-size: 1.2rem; max-width: 600px; margin: 0 auto 60px; line-height: 1.6;">
-                <?php _e('Volunteering with Kili Smile is more than giving back—it\'s about growing, learning, and creating lasting impact.', 'kilismile'); ?>
+                <?php _e('Volunteering with Kilismile is more than giving back—it\'s about growing, learning, and creating lasting impact.', 'kilismile'); ?>
             </p>
 
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; align-items: stretch;">
@@ -532,7 +532,7 @@ get_header(); ?>
                                   name="motivation" 
                                   rows="4" 
                                   style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical;"
-                                  placeholder="<?php _e('Share what motivates you to volunteer with Kili Smile...', 'kilismile'); ?>"></textarea>
+                                  placeholder="<?php _e('Share what motivates you to volunteer with Kilismile...', 'kilismile'); ?>"></textarea>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 30px;">
@@ -580,7 +580,7 @@ get_header(); ?>
                     </div>
                     <div style="padding-top: 40px;">
                         <p style="color: var(--text-secondary); line-height: 1.6; font-style: italic; margin-bottom: 20px;">
-                            "<?php _e('Volunteering with Kili Smile has been the most rewarding experience of my life. I\'ve learned so much while helping make a real difference in my community.', 'kilismile'); ?>"
+                            "<?php _e('Volunteering with Kilismile has been the most rewarding experience of my life. I\'ve learned so much while helping make a real difference in my community.', 'kilismile'); ?>"
                         </p>
                         <h4 style="color: var(--dark-green); margin-bottom: 5px;"><?php _e('Sarah Mwenda', 'kilismile'); ?></h4>
                         <p style="color: var(--medium-gray); font-size: 0.9rem;"><?php _e('Health Education Volunteer, 2 years', 'kilismile'); ?></p>
@@ -596,7 +596,7 @@ get_header(); ?>
                     </div>
                     <div style="padding-top: 40px;">
                         <p style="color: var(--text-secondary); line-height: 1.6; font-style: italic; margin-bottom: 20px;">
-                            "<?php _e('The flexibility and support from Kili Smile made it easy to balance volunteering with my studies. I gained valuable experience for my healthcare career.', 'kilismile'); ?>"
+                            "<?php _e('The flexibility and support from Kilismile made it easy to balance volunteering with my studies. I gained valuable experience for my healthcare career.', 'kilismile'); ?>"
                         </p>
                         <h4 style="color: var(--dark-green); margin-bottom: 5px;"><?php _e('John Kisanga', 'kilismile'); ?></h4>
                         <p style="color: var(--medium-gray); font-size: 0.9rem;"><?php _e('Community Outreach Volunteer, 1 year', 'kilismile'); ?></p>
@@ -612,7 +612,7 @@ get_header(); ?>
                     </div>
                     <div style="padding-top: 40px;">
                         <p style="color: var(--text-secondary); line-height: 1.6; font-style: italic; margin-bottom: 20px;">
-                            "<?php _e('Working with Kili Smile connected me with amazing people who share my passion for health education. The impact we create together is incredible.', 'kilismile'); ?>"
+                            "<?php _e('Working with Kilismile connected me with amazing people who share my passion for health education. The impact we create together is incredible.', 'kilismile'); ?>"
                         </p>
                         <h4 style="color: var(--dark-green); margin-bottom: 5px;"><?php _e('Grace Mahali', 'kilismile'); ?></h4>
                         <p style="color: var(--medium-gray); font-size: 0.9rem;"><?php _e('Event Support Volunteer, 3 years', 'kilismile'); ?></p>
@@ -832,3 +832,5 @@ function showNotification(message) {
 </style>
 
 <?php get_footer(); ?>
+
+

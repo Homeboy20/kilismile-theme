@@ -15,8 +15,9 @@
                         if ($footer_logo_id) :
                             $footer_logo = wp_get_attachment_image_src($footer_logo_id, 'full');
                             if ($footer_logo) :
+                                $footer_logo_url = set_url_scheme($footer_logo[0], is_ssl() ? 'https' : 'http');
                         ?>
-                            <img src="<?php echo esc_url($footer_logo[0]); ?>" 
+                            <img src="<?php echo esc_url($footer_logo_url); ?>" 
                                  alt="<?php echo esc_attr(get_bloginfo('name')); ?>" 
                                  width="<?php echo esc_attr($footer_logo_size); ?>" 
                                  height="<?php echo esc_attr($footer_logo_size); ?>"
@@ -27,8 +28,9 @@
                             $custom_logo_id = get_theme_mod('custom_logo');
                             $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
                             if ($logo) :
+                                $footer_fallback_logo_url = set_url_scheme($logo[0], is_ssl() ? 'https' : 'http');
                         ?>
-                            <img src="<?php echo esc_url($logo[0]); ?>" 
+                            <img src="<?php echo esc_url($footer_fallback_logo_url); ?>" 
                                  alt="<?php echo esc_attr(get_bloginfo('name')); ?>" 
                                  width="<?php echo esc_attr($footer_logo_size); ?>" 
                                  height="<?php echo esc_attr($footer_logo_size); ?>"
@@ -86,7 +88,7 @@
                     <h4 class="footer-heading"><?php _e('Get In Touch', 'kilismile'); ?></h4>
                     <?php 
                     $address = get_theme_mod('kilismile_address', 'P.O. Box 928, Moshi, Kilimanjaro, Tanzania');
-                    $phone = get_theme_mod('kilismile_phone', '0763495575/0735495575');
+                    $phone = get_theme_mod('kilismile_phone', '+255763495575/+255735495575');
                     $email = get_theme_mod('kilismile_email', 'kilismile21@gmail.com');
                     ?>
                     
@@ -212,7 +214,9 @@ function kilismile_footer_fallback_menu() {
     echo '<li><a href="' . esc_url(home_url('/about')) . '">' . __('About Us', 'kilismile') . '</a></li>';
     echo '<li><a href="' . esc_url(home_url('/programs')) . '">' . __('Programs', 'kilismile') . '</a></li>';
     echo '<li><a href="' . esc_url(home_url('/contact')) . '">' . __('Contact', 'kilismile') . '</a></li>';
-    echo '<li><a href="' . esc_url(home_url('/donate')) . '">' . __('Donate', 'kilismile') . '</a></li>';
+    echo '<li><a href="' . esc_url(function_exists('kilismile_get_donation_page_url_legacy') ? kilismile_get_donation_page_url_legacy() : home_url('/donation/')) . '">' . __('Donate', 'kilismile') . '</a></li>';
     echo '</ul>';
 }
 ?>
+
+

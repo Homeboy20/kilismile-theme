@@ -1,0 +1,64 @@
+<?php
+/**
+ * Centralized Payment Debugging Utilities
+ */
+if (!defined('ABSPATH')) exit;
+
+if (!function_exists('kilismile_payment_debug')) {
+    /**
+     * Write a structured payment debug line if enabled.
+     * @param string $event Event name/category
+     * @param array|string $data Context data
+     * @param string $level info|warning|error
+     */
+    function kilismile_payment_debug($event, $data = [], $level = 'info') {
+        $enabled = get_option('kilismile_payment_debug_enabled', false);
+        if (!$enabled) return;
+
+        if (!defined('WP_DEBUG') || !WP_DEBUG) return; // only log when WP_DEBUG true to avoid noise in production
+
+        $log_file = WP_CONTENT_DIR . '/payment-debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $entry = [
+            'time' => $timestamp,
+            'level' => $level,
+            'event' => $event,
+            'data' => $data
+        ];
+        // Normalize to string
+        $line = json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        file_put_contents($log_file, $line . "\n", FILE_APPEND);
+    }
+}
+
+if (!function_exists('kilismile_payment_debug_tail')) {
+    /**
+     * Return last N lines from payment-debug.log
+     * @param int $lines
+     * @return array
+     */
+    function kilismile_payment_debug_tail($lines = 200) {
+        $log_file = WP_CONTENT_DIR . '/payment-debug.log';
+        if (!file_exists($log_file)) return [];
+        $fh = fopen($log_file, 'r');
+        if (!$fh) return [];
+        $buffer = '';
+        $chunk_size = 4096;
+        $pos = -1;
+        $line_count = 0;
+        $stat = fstat($fh);
+        $size = $stat['size'];
+        while ($line_count <= $lines && $size > 0) {
+            $seek = max($size - $chunk_size, 0);
+            fseek($fh, $seek);
+            $read = fread($fh, $size - $seek);
+            $buffer = $read . $buffer;
+            $size = $seek;
+            $line_count = substr_count($buffer, "\n");
+            if ($seek === 0) break;
+        }
+        fclose($fh);
+        $rows = explode("\n", trim($buffer));
+        return array_slice($rows, -$lines);
+    }
+}

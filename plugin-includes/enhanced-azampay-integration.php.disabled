@@ -1,0 +1,1047 @@
+<?php
+/**
+ * Enhanced AzamPay Integration for KiliSmile Theme
+ * Based on official AzamPay API documentation
+ * https://developerdocs.azampay.co.tz/redoc#section/Introduction
+ */
+
+if (!defined('ABSPATH')) exit;
+
+class KiliSmile_Enhanced_AzamPay {
+    private $app_name;
+    private $client_id;
+    private $client_secret;
+    private $partner_id; // New: unique identifier for the partner (merchant)
+    private $vendor_name; // New: vendor name to display on checkout
+    private $payment_endpoint;
+    private $auth_endpoint;
+    private $api_version; // New: API version to use
+    private $sandbox_mode;
+    private $access_token;
+    private $logo_url; // New: logo to display on checkout page
+    private $callback_url; // New: callback URL for payment notifications
+    private $success_url; // New: success URL for redirects
+    private $fail_url; // New: fail URL for redirects
+    private $cancel_url; // New: cancel URL for redirects
+    private $token_expiry; // New: track token expiration time
+
+    /**
+     * Constructor - Initialize integration with AzamPay API
+     */
+    public function __construct() {
+        // Get configuration from options
+        $this->app_name = get_option('kilismile_azampay_app_name', '');
+        $this->client_id = get_option('kilismile_azampay_client_id', '');
+        $this->client_secret = get_option('kilismile_azampay_client_secret', '');
+        $this->partner_id = get_option('kilismile_azampay_partner_id', ''); // New field
+        $this->vendor_name = get_option('kilismile_azampay_vendor_name', 'KiliSmile Organization');
+        $this->sandbox_mode = get_option('kilismile_azampay_sandbox', true);
+        $this->api_version = get_option('kilismile_azampay_api_version', 'v1');
+        $this->logo_url = get_option('kilismile_azampay_logo_url', get_site_icon_url());
+        
+        // Set official AzamPay endpoints
+        if ($this->sandbox_mode) {
+            $this->payment_endpoint = 'https://sandbox.azampay.co.tz';
+            $this->auth_endpoint = 'https://authenticator-sandbox.azampay.co.tz';
+        } else {
+            $this->payment_endpoint = 'https://api.azampay.co.tz';
+            $this->auth_endpoint = 'https://authenticator.azampay.co.tz';
+        }
+        
+        // Set default URLs for redirects and callbacks
+        $this->callback_url = admin_url('admin-ajax.php?action=azampay_callback');
+        $this->success_url = home_url('/donation-success/');
+        $this->fail_url = home_url('/donation-failed/');
+        $this->cancel_url = home_url('/donation-cancelled/');
+        
+        // Add test endpoint for connection verification
+        add_action('wp_ajax_test_azampay_connection', array($this, 'test_connection_ajax'));
+        add_action('wp_ajax_nopriv_test_azampay_connection', array($this, 'test_connection_ajax'));
+        
+        // Add callback handler
+        add_action('wp_ajax_azampay_callback', array($this, 'handle_checkout_callback'));
+        add_action('wp_ajax_nopriv_azampay_callback', array($this, 'handle_checkout_callback'));
+        
+        // Debug logging
+        $this->log("AzamPay integration initialized with environment: " . ($this->sandbox_mode ? 'sandbox' : 'production'));
+        kilismile_payment_debug('azampay_enhanced_init', [
+            'env' => $this->sandbox_mode ? 'sandbox' : 'production',
+            'app' => $this->app_name
+        ]);
+    }
+
+    /**
+     * Get access token using official AzamPay authentication
+     * @return string Valid access token
+     * @throws Exception on authentication error
+     */
+    public function get_access_token() {
+        // Check if we have a valid cached token
+        $token_data = get_transient('kilismile_azampay_token_data');
+        
+        if ($token_data) {
+            $token_data = json_decode($token_data, true);
+            $this->access_token = $token_data['token'];
+            $this->token_expiry = $token_data['expiry'];
+            
+            // Check if token is still valid (with 5-minute buffer)
+            if (time() < ($this->token_expiry - 300)) {
+                $this->log("Using cached token (expires in " . ($this->token_expiry - time()) . " seconds)");
+                return $this->access_token;
+            }
+        }
+        
+    $this->log("Requesting new AzamPay authentication token");
+    kilismile_payment_debug('azampay_auth_request', ['endpoint' => $this->auth_endpoint]);
+        
+        $url = $this->auth_endpoint . '/AppRegistration/GenerateToken';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+        );
+        
+        $body = array(
+            'appName' => $this->app_name,
+            'clientId' => $this->client_id,
+            'clientSecret' => $this->client_secret
+        );
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            $this->log("Authentication error: " . $error_message, 'error');
+            throw new Exception('Authentication error: ' . $error_message);
+        }
+        
+        $body_response = wp_remote_retrieve_body($response);
+        $data = json_decode($body_response, true);
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+            $this->log("Authentication response: " . $body_response);
+            kilismile_payment_debug('azampay_auth_response', ['code' => $response_code, 'body' => $data]);
+        
+        if ($response_code !== 200) {
+            $error_message = isset($data['message']) ? $data['message'] : 'Authentication failed';
+            $this->log("Authentication failed: " . $error_message, 'error');
+            throw new Exception($error_message);
+        }
+        
+        if (isset($data['data']['accessToken'])) {
+            $token = $data['data']['accessToken'];
+            $expiry_seconds = isset($data['data']['expiresIn']) ? (int)$data['data']['expiresIn'] : 3600;
+            $expiry_time = time() + $expiry_seconds;
+            
+            // Cache token data with expiry info
+            $token_data = json_encode(array(
+                'token' => $token,
+                'expiry' => $expiry_time
+            ));
+            
+            // Cache for slightly less than the actual expiry to ensure we don't use expired tokens
+            set_transient('kilismile_azampay_token_data', $token_data, $expiry_seconds - 300);
+            
+            $this->access_token = $token;
+            $this->token_expiry = $expiry_time;
+            
+            $this->log("Authentication successful, token expires in " . $expiry_seconds . " seconds");
+            return $token;
+        }
+        
+        $this->log("Unable to retrieve access token", 'error');
+        throw new Exception('Unable to retrieve access token');
+    }
+
+    /**
+     * Test connection endpoint for debugging
+     */
+    public function test_connection_ajax() {
+        if (!wp_verify_nonce($_POST['nonce'], 'test_azampay')) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Invalid nonce')));
+        }
+
+        try {
+            // Test getting access token
+            $token = $this->get_access_token();
+            
+            if ($token) {
+                $data = array(
+                    'success' => true, 
+                    'data' => array(
+                        'message' => 'AzamPay connection successful',
+                        'token_received' => !empty($token),
+                        'token_expiry' => $this->token_expiry ? date('Y-m-d H:i:s', $this->token_expiry) : 'Unknown',
+                        'environment' => $this->sandbox_mode ? 'sandbox' : 'production',
+                        'auth_endpoint' => $this->auth_endpoint,
+                        'payment_endpoint' => $this->payment_endpoint,
+                        'api_version' => $this->api_version,
+                        'callback_url' => $this->callback_url,
+                        'timestamp' => current_time('mysql')
+                    )
+                );
+                $this->log("Connection test successful");
+                wp_die(json_encode($data));
+            } else {
+                $this->log("Connection test failed: No token received", 'error');
+                wp_die(json_encode(array(
+                    'success' => false, 
+                    'data' => 'Failed to obtain access token'
+                )));
+            }
+        } catch (Exception $e) {
+            $this->log("Connection test failed: " . $e->getMessage(), 'error');
+            wp_die(json_encode(array(
+                'success' => false, 
+                'data' => 'Connection test failed: ' . $e->getMessage()
+            )));
+        }
+    }
+
+    /**
+     * Create AzamPay Checkout Session (Hosted Payment Page)
+     * Using official /azampay/checkout/json endpoint from documentation
+     * 
+     * @param array $payment_data Payment details
+     * @return array Result with success status and checkout URL
+     * @throws Exception on error
+     */
+    public function create_checkout_session($payment_data) {
+        $this->log("Creating checkout session: " . json_encode($payment_data));
+        kilismile_payment_debug('azampay_checkout_start', $payment_data);
+        
+        // Since the hosted checkout endpoints (/azampay/checkout and /azampay/checkout/json) 
+        // are returning 404 in sandbox, we'll use MNO checkout for mobile money providers
+        // This provides a similar user experience with direct mobile money payment
+        
+        // Determine the provider based on donor's phone network or default to Mpesa
+        $provider = $this->determine_provider($payment_data['donor_phone'] ?? '');
+        
+        // Create an MNO checkout session instead of hosted checkout
+        return $this->initiate_stk_push_checkout($payment_data, $provider);
+    }
+    
+    /**
+     * Determine the mobile money provider based on phone number
+     */
+    private function determine_provider($phone_number) {
+        // Remove any non-numeric characters and country codes
+        $phone = preg_replace('/[^0-9]/', '', $phone_number);
+        
+        // Tanzania mobile prefixes (without country code)
+        if (preg_match('/^(0?65|0?68|0?69)/', $phone)) {
+            return 'Tigo';
+        } elseif (preg_match('/^(0?74|0?75|0?76)/', $phone)) {
+            return 'Airtel';
+        } elseif (preg_match('/^(0?71|0?72|0?73)/', $phone)) {
+            return 'Halopesa';
+        } elseif (preg_match('/^(0?78)/', $phone)) {
+            return 'Azampesa';
+        } else {
+            // Default to Mpesa for Vodacom and unknown numbers
+            return 'Mpesa';
+        }
+    }
+    
+    /**
+     * Use MNO checkout as a "checkout page" alternative
+     */
+    private function initiate_stk_push_checkout($payment_data, $provider) {
+        $this->log("Initiating MNO checkout (as checkout page): Provider: $provider");
+        
+        // Get access token
+        $token = $this->get_access_token();
+        
+        $url = rtrim($this->payment_endpoint, '/') . '/azampay/mno/checkout';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $token
+        );
+        
+        // Prepare MNO checkout request
+        $body = array(
+            'accountNumber' => $payment_data['donor_phone'],
+            'amount' => (float)$payment_data['amount'],
+            'currency' => strtoupper($payment_data['currency']),
+            'externalId' => $payment_data['reference'],
+            'provider' => $provider,
+            'additionalProperties' => array(
+                'donorName' => $payment_data['donor_name'],
+                'donorEmail' => $payment_data['donor_email'],
+                'description' => 'KiliSmile Donation',
+                'purpose' => $payment_data['purpose'] ?? 'healthcare'
+            )
+        );
+        
+        $this->log("MNO Checkout request URL: $url");
+        $this->log("MNO Checkout request body: " . json_encode($body));
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            $this->log("MNO Checkout network error: " . $error_message, 'error');
+            throw new Exception('Network error: ' . $error_message);
+        }
+        
+        $body_response = wp_remote_retrieve_body($response);
+        $response_code = wp_remote_retrieve_response_code($response);
+        $data = json_decode($body_response, true);
+        
+        $this->log("MNO Checkout response (code $response_code): " . $body_response);
+        
+        if ($response_code === 200 && $data && isset($data['success']) && $data['success']) {
+            $this->log("MNO Checkout initiated successfully");
+            kilismile_payment_debug('azampay_checkout_success', $data);
+            
+            return array(
+                'status' => 'success',
+                'transaction_id' => $data['transactionId'] ?? null,
+                'message' => $data['message'] ?? 'Payment initiated successfully',
+                'payment_method' => 'azampay_mno',
+                'provider' => $provider,
+                'reference' => $payment_data['reference']
+            );
+        } else {
+            $error_message = $data['message'] ?? 'MNO checkout creation failed';
+            $this->log("MNO Checkout creation failed (code $response_code): " . $error_message, 'error');
+            kilismile_payment_debug('azampay_checkout_error', array('response_code' => $response_code, 'response' => $data));
+            throw new Exception($error_message);
+        }
+    }
+    
+    /**
+     * Legacy method - keeping for backward compatibility but redirecting to MNO checkout
+     */
+    public function create_checkout_session_legacy($payment_data) {
+
+        // Get access token first
+        $token = $this->get_access_token();
+        
+        // Build URLs with reference for tracking
+        $reference = $payment_data['reference'];
+        $success_url = add_query_arg('ref', $reference, $this->success_url);
+        $fail_url = add_query_arg('ref', $reference, $this->fail_url);
+        
+        // Try the simpler endpoint first - /azampay/checkout instead of /azampay/checkout/json
+        $url = rtrim($this->payment_endpoint, '/') . '/azampay/checkout';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $token
+        );
+        
+        // Prepare checkout request data according to official API documentation
+        $body = array(
+            'amount' => (float)$payment_data['amount'],
+            'currency' => strtoupper($payment_data['currency']),
+            'externalId' => $reference,
+            'redirectSuccessURL' => $success_url,
+            'redirectFailURL' => $fail_url
+        );
+        
+        $this->log("Checkout request URL: $url");
+        $this->log("Checkout request body: " . json_encode($body));
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            $this->log("Checkout creation network error: " . $error_message, 'error');
+            throw new Exception('Network error: ' . $error_message);
+        }
+        
+        $body_response = wp_remote_retrieve_body($response);
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_headers = wp_remote_retrieve_headers($response);
+        $data = json_decode($body_response, true);
+
+        // If we get 404, try the /json endpoint as fallback
+        if ($response_code === 404) {
+            $this->log("404 on /azampay/checkout, trying /azampay/checkout/json fallback");
+            
+            $url = rtrim($this->payment_endpoint, '/') . '/azampay/checkout/json';
+            
+            $response = wp_remote_post($url, array(
+                'headers' => $headers,
+                'body' => json_encode($body),
+                'timeout' => 30,
+                'sslverify' => !$this->sandbox_mode
+            ));
+            
+            if (is_wp_error($response)) {
+                $error_message = $response->get_error_message();
+                $this->log("Checkout creation network error on fallback: " . $error_message, 'error');
+                throw new Exception('Network error: ' . $error_message);
+            }
+            
+            $body_response = wp_remote_retrieve_body($response);
+            $response_code = wp_remote_retrieve_response_code($response);
+            $response_headers = wp_remote_retrieve_headers($response);
+            $data = json_decode($body_response, true);
+            
+            $this->log("Fallback checkout response (code $response_code): $body_response");
+        }
+
+        // Extract response data according to official documentation
+        $transaction_id = $data['transactionId'] ?? '';
+        $pg_url = $data['pgUrl'] ?? '';
+        $success = $data['success'] ?? false;
+        $message = $data['message'] ?? '';
+
+        $this->log("Checkout raw response (code $response_code): $body_response");
+        kilismile_payment_debug('azampay_checkout_response', ['code' => $response_code, 'transaction_id' => $transaction_id, 'pg_url' => $pg_url, 'raw' => $data]);
+
+        // Persist comprehensive debug packet for this reference
+        $debug_packet = array(
+            'timestamp' => current_time('mysql'),
+            'request_url' => $url,
+            'request_body' => $body,
+            'response_code' => $response_code,
+            'response_headers' => $response_headers,
+            'response_body' => $body_response,
+            'parsed_transaction_id' => $transaction_id,
+            'parsed_pg_url' => $pg_url,
+            'parsed_success' => $success
+        );
+        update_option('kilismile_azampay_checkout_debug_' . $reference, wp_json_encode($debug_packet));
+
+        // Check for successful response (200 OK)
+        if ($response_code !== 200) {
+            $error_message = $message ?: 'Checkout session creation failed';
+            $this->log("Checkout creation failed (code $response_code): $error_message", 'error');
+            kilismile_payment_debug('azampay_checkout_error', ['code' => $response_code, 'error' => $error_message, 'body' => $data], 'error');
+            throw new Exception($error_message);
+        }
+
+        // Check if the API returned success
+        if (!$success) {
+            $error_message = $message ?: 'Checkout session creation was not successful';
+            $this->log("Checkout creation unsuccessful: $error_message", 'error');
+            throw new Exception($error_message);
+        }
+
+        if (!$pg_url) {
+            $this->log("Checkout creation succeeded but no payment URL found", 'error');
+            throw new Exception('Checkout created without a payment URL');
+        }
+
+        // Store transaction details
+        if ($transaction_id) {
+            update_option('kilismile_azampay_checkout_' . $reference, $transaction_id);
+        }
+        update_option('kilismile_azampay_checkout_response_' . $reference, $body_response);
+        $this->log("Checkout created successfully (transaction_id=$transaction_id)");
+        kilismile_payment_debug('azampay_checkout_success', ['transaction_id' => $transaction_id, 'pg_url' => $pg_url]);
+
+        return array(
+            'success' => true,
+            'checkout_url' => $pg_url,
+            'transaction_id' => $transaction_id,
+            'reference' => $reference,
+            'message' => $message ?: 'Checkout session created successfully'
+        );
+    }
+
+    /**
+     * Initiate mobile money payment using STK Push (Direct Mobile Payment)
+     * 
+     * @param array $payment_data Payment details
+     * @return array Result with success status and transaction details
+     * @throws Exception on error
+     */
+    public function initiate_stkpush($payment_data) {
+    $this->log("Initiating STK Push: " . json_encode($payment_data));
+    kilismile_payment_debug('azampay_stk_start', $payment_data);
+        
+        // Get access token first
+        $token = $this->get_access_token();
+        
+        // Format the phone number properly
+        $phone = $this->format_phone_number($payment_data['donor_phone']);
+        if (!$phone) {
+            $this->log("Invalid phone number format: " . $payment_data['donor_phone'], 'error');
+            throw new Exception('Invalid phone number format. Please use format: 255XXXXXXXXX');
+        }
+        
+        // Map network provider to official AzamPay enum
+        $provider = $this->map_network_provider($payment_data['network']);
+        
+        $url = $this->payment_endpoint . '/azampay/mno/checkout';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $token
+        );
+        
+        // Prepare STK Push request data
+        $body = array(
+            'accountNumber' => $phone,
+            'amount' => $payment_data['amount'],
+            'currency' => $payment_data['currency'],
+            'externalId' => $payment_data['reference'],
+            'provider' => $provider,
+            'additionalProperties' => array(
+                'donorName' => $payment_data['donor_name'],
+                'donorEmail' => $payment_data['donor_email'],
+                'description' => 'KiliSmile Donation',
+                'purpose' => $payment_data['purpose'] ?? 'healthcare',
+                'isAnonymous' => isset($payment_data['anonymous']) && $payment_data['anonymous'] ? 'true' : 'false'
+            )
+        );
+        
+        // Add Partner ID if available
+        if (!empty($this->partner_id)) {
+            $body['vendorId'] = $this->partner_id;
+        }
+        
+        // Add notification URL (callback) if available
+        if (!empty($this->callback_url)) {
+            $body['callbackUrl'] = $this->callback_url;
+        }
+        
+        $this->log("STK Push request: " . json_encode($body));
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            $this->log("STK Push network error: " . $error_message, 'error');
+            throw new Exception('Network error: ' . $error_message);
+        }
+        
+        $body_response = wp_remote_retrieve_body($response);
+        $data = json_decode($body_response, true);
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+    $this->log("STK Push response: " . $body_response);
+    kilismile_payment_debug('azampay_stk_response', ['code' => $response_code, 'body' => $data]);
+        
+        if ($response_code !== 200) {
+            $error_message = isset($data['message']) ? $data['message'] : 'STK push failed';
+            $this->log("STK Push failed: " . $error_message, 'error');
+            kilismile_payment_debug('azampay_stk_error', ['code' => $response_code, 'error' => $error_message, 'body' => $data], 'error');
+            throw new Exception($error_message);
+        }
+        
+        // Store the transaction ID for status checking
+        if (isset($data['transactionId'])) {
+            update_option('kilismile_azampay_stkpush_' . $payment_data['reference'], $data['transactionId']);
+            
+            // Also save the full response for troubleshooting
+            update_option('kilismile_azampay_stkpush_response_' . $payment_data['reference'], $body_response);
+            
+            $this->log("STK Push initiated successfully with transaction ID: " . $data['transactionId']);
+            kilismile_payment_debug('azampay_stk_success', ['transaction_id' => $data['transactionId']]);
+        }
+        
+        return array(
+            'success' => true,
+            'transaction_id' => $data['transactionId'] ?? '',
+            'reference' => $payment_data['reference'],
+            'message' => 'STK push sent to your phone. Please complete the payment.',
+            'provider' => $provider
+        );
+    }
+
+    /**
+     * Handle AzamPay checkout callback
+     * Based on official callback documentation structure
+     */
+    public function handle_checkout_callback() {
+        // Get the raw POST data
+        $raw_data = file_get_contents('php://input');
+    $this->log("Callback received: " . $raw_data);
+    kilismile_payment_debug('azampay_callback_received', ['raw' => $raw_data]);
+        
+        $callback_data = json_decode($raw_data, true);
+        
+        if (!$callback_data) {
+            $this->log("Callback: Invalid JSON data", 'error');
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Invalid JSON data']);
+            exit;
+        }
+        
+        // Verify required callback fields according to official documentation
+        $required_fields = ['transactionId', 'success', 'amount', 'msisdn', 'provider', 'statusCode', 'message'];
+        foreach ($required_fields as $field) {
+            if (!isset($callback_data[$field])) {
+                $this->log("Callback: Missing required field: " . $field, 'error');
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => 'Missing required field: ' . $field]);
+                exit;
+            }
+        }
+        
+        // Extract callback data according to official documentation
+        $transaction_id = $callback_data['transactionId'];
+        $success = $callback_data['success'];
+        $amount = $callback_data['amount'];
+        $msisdn = $callback_data['msisdn'];
+        $provider = $callback_data['provider'];
+        $status_code = $callback_data['statusCode'];
+        $message = $callback_data['message'];
+        $fsp_reference_id = $callback_data['fspReferenceId'] ?? '';
+        $additional_properties = $callback_data['additionalProperties'] ?? array();
+        
+        $this->log("Processing callback for transaction: " . $transaction_id . " with success: " . ($success ? 'true' : 'false'));
+        kilismile_payment_debug('azampay_callback_processing', ['transaction_id' => $transaction_id, 'success' => $success]);
+        
+        // Find the donation by stored AzamPay transaction ID
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'donations';
+        
+        $donation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE gateway_transaction_id = %s OR donation_id IN (
+                SELECT REPLACE(option_name, 'kilismile_azampay_checkout_', '') 
+                FROM {$wpdb->options} 
+                WHERE option_name LIKE 'kilismile_azampay_checkout_%' 
+                AND option_value = %s
+            )",
+            $transaction_id,
+            $transaction_id
+        ));
+        
+        if (!$donation) {
+            $this->log("Callback: No donation found for transaction ID: {$transaction_id}", 'error');
+            http_response_code(404);
+            echo json_encode(['status' => 'error', 'message' => 'Transaction not found']);
+            exit;
+        }
+        
+        // Map success status to our internal status according to documentation
+        $new_status = $success ? 'completed' : 'failed';
+        
+        // Additional status mapping based on status code if needed
+        if (!$success && $status_code) {
+            switch ($status_code) {
+                case 1:
+                    $new_status = 'completed';
+                    break;
+                case 0:
+                case 400:
+                case 500:
+                    $new_status = 'failed';
+                    break;
+                default:
+                    $new_status = 'pending';
+            }
+        }
+        
+        $updated = $wpdb->update(
+            $table_name,
+            array(
+                'status' => $new_status,
+                'gateway_transaction_id' => $transaction_id,
+                'gateway_response' => wp_json_encode($callback_data),
+                'updated_at' => current_time('mysql')
+            ),
+            array('id' => $donation->id),
+            array('%s', '%s', '%s', '%s'),
+            array('%d')
+        );
+        
+        if ($updated !== false) {
+            $this->log("Updated donation {$donation->donation_id} to status {$new_status}");
+            kilismile_payment_debug('azampay_callback_updated', ['reference' => $donation->donation_id, 'status' => $new_status]);
+            
+            // Send confirmation email if payment was successful
+            if ($new_status === 'completed') {
+                $this->send_payment_confirmation($donation->donation_id, $callback_data);
+            }
+            
+            // Respond with success according to documentation
+            http_response_code(200);
+            echo json_encode(['status' => 'success', 'message' => 'Callback processed successfully']);
+        } else {
+            $this->log("Failed to update donation {$donation->donation_id}", 'error');
+            kilismile_payment_debug('azampay_callback_update_failed', ['reference' => $donation->donation_id], 'error');
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Database update failed']);
+        }
+        
+        exit;
+    }
+
+    /**
+     * Get Apache request headers if getallheaders() is not available
+     * @return array Headers
+     */
+    private function get_apache_headers() {
+        $headers = array();
+        foreach ($_SERVER as $key => $value) {
+            if (substr($key, 0, 5) == 'HTTP_') {
+                $header = str_replace(' ', '-', ucwords(str_replace('_', ' ', strtolower(substr($key, 5)))));
+                $headers[$header] = $value;
+            }
+        }
+        return $headers;
+    }
+
+    /**
+     * Verify callback signature (if AzamPay provides signature verification)
+     * 
+     * @param string $data Raw callback data
+     * @param string $signature Signature from headers
+     * @return bool Valid signature
+     */
+    private function verify_callback_signature($data, $signature) {
+        // This is a placeholder - update based on AzamPay documentation
+        // In a real implementation, we would verify the signature here
+        // For now, we'll just log that we received a signature
+        $this->log("Callback signature verification: " . $signature);
+        
+        // Typically this would involve using the client secret and data to verify the signature
+        return true;
+    }
+
+    /**
+     * Send payment confirmation email
+     * 
+     * @param string $reference Transaction reference
+     * @param array $callback_data Callback data from AzamPay
+     */
+    private function send_payment_confirmation($reference, $callback_data) {
+        // Get donation details from database
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'donations';
+        $donation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE donation_id = %s",
+            $reference
+        ));
+        
+        if (!$donation) {
+            $this->log("Cannot send confirmation email - donation not found: " . $reference, 'error');
+            return;
+        }
+        
+        $this->log("Sending payment confirmation email for: " . $reference);
+        
+        // Prepare email content
+        $to = $donation->email;
+        $subject = 'Thank You for Your Donation to KiliSmile';
+        
+        $message = sprintf(
+            "Dear %s,\n\nThank you for your donation of %s %s to KiliSmile Organization. Your contribution will help us provide healthcare services to those in need.\n\nDonation Reference: %s\nPayment Status: Completed\nDate: %s\n\nThank you for your support!\n\nBest regards,\nKiliSmile Team",
+            $donation->first_name,
+            $donation->currency,
+            number_format($donation->amount, 2),
+            $reference,
+            date('Y-m-d H:i:s')
+        );
+        
+        // Send email
+        $mail_sent = wp_mail($to, $subject, $message);
+        
+        if ($mail_sent) {
+            $this->log("Confirmation email sent to: " . $to);
+        } else {
+            $this->log("Failed to send confirmation email to: " . $to, 'error');
+        }
+    }
+
+    /**
+     * Check payment status using official AzamPay status endpoint
+     * 
+     * @param string $transaction_ref Transaction reference
+     * @return array Status information
+     * @throws Exception on error
+     */
+    public function check_payment_status($transaction_ref) {
+    $this->log("Checking payment status for: " . $transaction_ref);
+    kilismile_payment_debug('azampay_status_check_start', ['reference' => $transaction_ref]);
+        
+        // Get the AzamPay transaction ID
+        $azampay_transaction_id = get_option('kilismile_azampay_stkpush_' . $transaction_ref);
+        if (!$azampay_transaction_id) {
+            // Check if this was a checkout session instead
+            $azampay_transaction_id = get_option('kilismile_azampay_checkout_' . $transaction_ref);
+            
+            if (!$azampay_transaction_id) {
+                $this->log("No transaction ID found for reference: " . $transaction_ref, 'warning');
+                return array(
+                    'status' => 'pending',
+                    'message' => 'Payment is still being processed'
+                );
+            }
+        }
+        
+        // Get access token
+        $token = $this->get_access_token();
+        
+        // Get the provider/bank name from the stored transaction
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'donations';
+        $transaction = $wpdb->get_row($wpdb->prepare(
+            "SELECT payment_method FROM $table_name WHERE donation_id = %s",
+            $transaction_ref
+        ));
+        
+        $bank_name = 'Mpesa'; // Default
+        if ($transaction && $transaction->payment_method) {
+            $network = str_replace('azampay_', '', $transaction->payment_method);
+            $bank_name = $this->map_network_provider($network);
+        }
+        
+        // Build the query parameters
+        $query_params = array(
+            'pgReferenceId' => $azampay_transaction_id
+        );
+        
+        // Add bank name if available
+        if ($bank_name) {
+            $query_params['bankName'] = $bank_name;
+        }
+        
+        $url = $this->payment_endpoint . '/azampay/gettransactionstatus?' . http_build_query($query_params);
+        
+        $headers = array(
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json'
+        );
+        
+        $this->log("Status check request: " . $url);
+        
+        $response = wp_remote_get($url, array(
+            'headers' => $headers,
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            $this->log("Status check network error: " . $error_message, 'error');
+            throw new Exception('Network error: ' . $error_message);
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+    $this->log("Status check response: " . $body);
+    kilismile_payment_debug('azampay_status_check_response', ['code' => $response_code, 'body' => $data]);
+        
+        if ($response_code === 200 && isset($data['success']) && $data['success']) {
+            // Payment successful
+            $status = 'completed';
+            $message = 'Payment completed successfully';
+            
+            // Update transaction status in database
+            $this->update_transaction_status($transaction_ref, $status);
+            
+            $this->log("Payment status: completed for transaction: " . $transaction_ref);
+            kilismile_payment_debug('azampay_status_completed', ['reference' => $transaction_ref]);
+            
+            return array(
+                'status' => $status,
+                'message' => $message,
+                'transaction_id' => $azampay_transaction_id,
+                'data' => $data
+            );
+        } elseif ($response_code === 402 || $response_code === 404) {
+            // Transaction not found or expired
+            $this->log("Payment not found or expired: " . $transaction_ref);
+            return array(
+                'status' => 'pending',
+                'message' => 'Payment is still processing or not found',
+                'transaction_id' => $azampay_transaction_id
+            );
+        } elseif (isset($data['status']) && strtolower($data['status']) === 'failed') {
+            // Payment failed
+            $status = 'failed';
+            $message = 'Payment failed: ' . ($data['message'] ?? 'Unknown reason');
+            
+            // Update transaction status in database
+            $this->update_transaction_status($transaction_ref, $status);
+            
+            $this->log("Payment failed for transaction: " . $transaction_ref);
+            kilismile_payment_debug('azampay_status_failed', ['reference' => $transaction_ref]);
+            
+            return array(
+                'status' => $status,
+                'message' => $message,
+                'transaction_id' => $azampay_transaction_id,
+                'data' => $data
+            );
+        }
+        
+        // Default to pending for any other response
+        return array(
+            'status' => 'pending',
+            'message' => 'Payment is still being processed',
+            'transaction_id' => $azampay_transaction_id
+        );
+    }
+
+    /**
+     * Format phone number to international format
+     * 
+     * @param string $phone Phone number to format
+     * @return string|false Formatted phone number or false if invalid
+     */
+    public function format_phone_number($phone) {
+        // Remove any non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Handle different formats
+        if (strlen($phone) === 9 && (substr($phone, 0, 1) === '6' || substr($phone, 0, 1) === '7')) {
+            // Format: 712345678 -> 255712345678
+            return '255' . $phone;
+        } elseif (strlen($phone) === 10 && substr($phone, 0, 1) === '0') {
+            // Format: 0712345678 -> 255712345678
+            return '255' . substr($phone, 1);
+        } elseif (strlen($phone) === 12 && substr($phone, 0, 3) === '255') {
+            // Already in correct format
+            return $phone;
+        } elseif (strlen($phone) === 13 && substr($phone, 0, 4) === '+255') {
+            // Format: +255712345678 -> 255712345678
+            return substr($phone, 1);
+        }
+        
+        $this->log("Invalid phone number format: " . $phone, 'error');
+        return false;
+    }
+
+    /**
+     * Map mobile network to official AzamPay Provider enum values
+     * 
+     * @param string $network Network identifier
+     * @return string AzamPay provider enum value
+     */
+    public function map_network_provider($network) {
+        $network = strtolower($network);
+        
+        $providers = array(
+            'vodacom' => 'Mpesa',      // Official enum: Mpesa
+            'mpesa' => 'Mpesa',         // Alternative naming
+            'airtel' => 'Airtel',      // Official enum: Airtel  
+            'airtelmoney' => 'Airtel',  // Alternative naming
+            'tigo' => 'Tigo',          // Official enum: Tigo
+            'tigopesa' => 'Tigo',       // Alternative naming
+            'halotel' => 'Halopesa',    // Alternative naming
+            'halopesa' => 'Halopesa',  // Official enum: Halopesa
+            'azam' => 'Azampesa',       // Alternative naming
+            'azampesa' => 'Azampesa'   // Official enum: Azampesa
+        );
+        
+        return isset($providers[$network]) ? $providers[$network] : 'Mpesa';
+    }
+
+    /**
+     * Update transaction status in database
+     * 
+     * @param string $transaction_ref Transaction reference
+     * @param string $status New status
+     * @return bool Success
+     */
+    private function update_transaction_status($transaction_ref, $status) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'donations';
+        
+        $updated = $wpdb->update(
+            $table_name,
+            array(
+                'status' => $status,
+                'updated_at' => current_time('mysql')
+            ),
+            array('donation_id' => $transaction_ref),
+            array('%s', '%s'),
+            array('%s')
+        );
+        
+        if ($updated !== false) {
+            $this->log("Updated transaction status: " . $transaction_ref . " -> " . $status);
+            return true;
+        } else {
+            $this->log("Failed to update transaction status: " . $transaction_ref, 'error');
+            return false;
+        }
+    }
+
+    /**
+     * Log messages for debugging
+     * 
+     * @param string $message Message to log
+     * @param string $type Log type (info, error, warning)
+     */
+    private function log($message, $type = 'info') {
+        // Only log if WP_DEBUG is enabled
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        
+        $log_prefix = '[AzamPay ' . strtoupper($type) . '] ';
+        error_log($log_prefix . $message);
+        
+        // Also log to a custom file if desired
+        $log_file = WP_CONTENT_DIR . '/azampay-debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $log_entry = "[{$timestamp}] {$log_prefix}{$message}\n";
+        
+        // Append to log file
+        file_put_contents($log_file, $log_entry, FILE_APPEND);
+    }
+
+    /**
+     * Get integration settings for admin display
+     * 
+     * @return array Settings
+     */
+    public function get_settings() {
+        return array(
+            'app_name' => $this->app_name,
+            'client_id' => $this->client_id,
+            'partner_id' => $this->partner_id,
+            'vendor_name' => $this->vendor_name,
+            'sandbox_mode' => $this->sandbox_mode,
+            'auth_endpoint' => $this->auth_endpoint,
+            'payment_endpoint' => $this->payment_endpoint,
+            'api_version' => $this->api_version,
+            'logo_url' => $this->logo_url,
+            'callback_url' => $this->callback_url,
+            'success_url' => $this->success_url,
+            'fail_url' => $this->fail_url,
+            'cancel_url' => $this->cancel_url
+        );
+    }
+
+    /**
+     * Retrieve stored checkout debug packet for a given reference
+     * @param string $reference Donation/reference id
+     * @return array|null
+     */
+    public function get_checkout_debug($reference) {
+        $raw = get_option('kilismile_azampay_checkout_debug_' . $reference);
+        if (!$raw) return null;
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+}
+
+// Integration will be instantiated by the payment processor

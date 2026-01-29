@@ -1,6 +1,6 @@
 <?php
 /**
- * Advanced Server-Based Email System for Kili Smile Organization
+ * Advanced Server-Based Email System for Kilismile Organization
  * 
  * @package KiliSmile
  * @version 1.0.0
@@ -66,7 +66,7 @@ class KiliSmile_Email_System {
             'encryption' => get_option('kilismile_smtp_encryption', 'tls'),
             'auth' => get_option('kilismile_smtp_auth', true),
             'from_email' => get_option('kilismile_from_email', get_theme_mod('kilismile_email', 'kilismile21@gmail.com')),
-            'from_name' => get_option('kilismile_from_name', 'Kili Smile Organization'),
+            'from_name' => get_option('kilismile_from_name', 'Kilismile Organization'),
         );
     }
     
@@ -132,7 +132,7 @@ class KiliSmile_Email_System {
             'Content-Type: text/html; charset=UTF-8',
             'From: ' . $this->smtp_config['from_name'] . ' <' . $this->smtp_config['from_email'] . '>',
             'Reply-To: ' . $this->smtp_config['from_email'],
-            'X-Mailer: Kili Smile Email System v1.0'
+            'X-Mailer: Kilismile Email System v1.0'
         );
         
         $result = wp_mail($to, $subject, $template, $headers);
@@ -148,7 +148,7 @@ class KiliSmile_Email_System {
     public function send_welcome_email($to, $first_name = '', $data = array()) {
         $default_data = array(
             'first_name' => $first_name,
-            'organization_name' => 'Kili Smile Organization',
+            'organization_name' => 'Kilismile Organization',
             'website_url' => home_url(),
             'unsubscribe_url' => home_url('/unsubscribe?email=' . urlencode($to)),
             'email' => $to
@@ -183,7 +183,7 @@ class KiliSmile_Email_System {
             'donation_id' => $donation_data['id'],
             'payment_method' => $donation_data['payment_method'],
             'date' => date('F j, Y', strtotime($donation_data['created_at'])),
-            'organization_name' => 'Kili Smile Organization',
+            'organization_name' => 'Kilismile Organization',
             'website_url' => home_url(),
             'tax_info' => get_option('kilismile_tax_deduction_info', '')
         );
@@ -216,7 +216,7 @@ class KiliSmile_Email_System {
             'event_time' => $event_data['event_time'],
             'event_location' => $event_data['event_location'],
             'registration_id' => $event_data['registration_id'],
-            'organization_name' => 'Kili Smile Organization',
+            'organization_name' => 'Kilismile Organization',
             'website_url' => home_url(),
             'contact_email' => $this->smtp_config['from_email']
         );
@@ -303,7 +303,7 @@ class KiliSmile_Email_System {
                     'newsletter_content' => $content,
                     'unsubscribe_url' => home_url('/unsubscribe?email=' . urlencode($subscriber->email)),
                     'view_online_url' => home_url('/newsletter/' . $newsletter_id),
-                    'organization_name' => 'Kili Smile Organization',
+                    'organization_name' => 'Kilismile Organization',
                     'website_url' => home_url()
                 );
                 
@@ -371,7 +371,7 @@ class KiliSmile_Email_System {
                 $content = sprintf(
                     '<h2>Welcome %s!</h2>
                     <p>Thank you for subscribing to our newsletter. You will receive updates about our health programs and impact in Tanzania.</p>
-                    <p>Best regards,<br>The Kili Smile Team</p>',
+                    <p>Best regards,<br>The Kilismile Team</p>',
                     isset($data['first_name']) ? esc_html($data['first_name']) : ''
                 );
                 break;
@@ -392,7 +392,7 @@ class KiliSmile_Email_System {
                     <p>Dear %s,</p>
                     <p>We have received your donation of %s %s. Your support helps us continue our mission.</p>
                     <p>Donation ID: %s</p>
-                    <p>With gratitude,<br>The Kili Smile Team</p>',
+                    <p>With gratitude,<br>The Kilismile Team</p>',
                     isset($data['donor_name']) ? esc_html($data['donor_name']) : '',
                     isset($data['currency']) ? esc_html($data['currency']) : '',
                     isset($data['amount']) ? esc_html($data['amount']) : '',
@@ -401,7 +401,7 @@ class KiliSmile_Email_System {
                 break;
                 
             default:
-                $content = '<p>Thank you for your interest in Kili Smile Organization.</p>';
+                $content = '<p>Thank you for your interest in Kilismile Organization.</p>';
         }
         
         return $header . $content . $footer;
@@ -456,7 +456,7 @@ class KiliSmile_Email_System {
         $site_name = get_bloginfo('name');
         $site_url = home_url();
         $contact_email = get_theme_mod('kilismile_email', 'kilismile21@gmail.com');
-        $phone = get_theme_mod('kilismile_phone', '0763495575/0735495575');
+        $phone = get_theme_mod('kilismile_phone', '+255763495575/+255735495575');
         $address = get_theme_mod('kilismile_address', 'P.O. Box 928, Moshi, Kilimanjaro, Tanzania');
         
         return sprintf('
@@ -535,7 +535,7 @@ echo $this->get_email_header();
 
 <h2><?php _e("Welcome", "kilismile"); ?> <?php echo isset($first_name) ? esc_html($first_name) : ""; ?>!</h2>
 
-<p><?php _e("Thank you for subscribing to the Kili Smile Organization newsletter!", "kilismile"); ?></p>
+<p><?php _e("Thank you for subscribing to the Kilismile Organization newsletter!", "kilismile"); ?></p>
 
 <p><?php _e("You will now receive updates about:", "kilismile"); ?></p>
 <ul>
@@ -554,7 +554,7 @@ echo $this->get_email_header();
 <p><?php _e("Thank you for joining us in our mission to improve oral health in remote communities of Tanzania.", "kilismile"); ?></p>
 
 <p><?php _e("Best regards,", "kilismile"); ?><br>
-<?php _e("The Kili Smile Organization Team", "kilismile"); ?></p>
+<?php _e("The Kilismile Organization Team", "kilismile"); ?></p>
 
 ' . $footer;
                 
@@ -580,7 +580,7 @@ echo $this->get_email_header();
 <p><?php _e("Thank you for your continued support!", "kilismile"); ?></p>
 
 <p><?php _e("Best regards,", "kilismile"); ?><br>
-<?php _e("The Kili Smile Team", "kilismile"); ?></p>
+<?php _e("The Kilismile Team", "kilismile"); ?></p>
 
 ' . $footer;
                 
@@ -623,7 +623,7 @@ echo $this->get_email_header();
 </p>
 
 <p><?php _e("With deep gratitude,", "kilismile"); ?><br>
-<?php _e("The Kili Smile Organization Team", "kilismile"); ?></p>
+<?php _e("The Kilismile Organization Team", "kilismile"); ?></p>
 
 ' . $footer;
                 
@@ -664,12 +664,12 @@ echo $this->get_email_header();
             default:
                 return $header . '
 
-<h2><?php _e("Message from Kili Smile Organization", "kilismile"); ?></h2>
+<h2><?php _e("Message from Kilismile Organization", "kilismile"); ?></h2>
 
-<p><?php _e("Thank you for your interest in Kili Smile Organization.", "kilismile"); ?></p>
+<p><?php _e("Thank you for your interest in Kilismile Organization.", "kilismile"); ?></p>
 
 <p><?php _e("Best regards,", "kilismile"); ?><br>
-<?php _e("The Kili Smile Team", "kilismile"); ?></p>
+<?php _e("The Kilismile Team", "kilismile"); ?></p>
 
 ' . $footer;
         }
@@ -753,7 +753,7 @@ echo $this->get_email_header();
      */
     private function log_email_attempt($message) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Kili Smile Email System: ' . $message);
+            error_log('Kilismile Email System: ' . $message);
         }
     }
     
@@ -810,7 +810,7 @@ echo $this->get_email_header();
             wp_send_json_error(__('Invalid email address', 'kilismile'));
         }
         
-        $subject = __('Test Email from Kili Smile Organization', 'kilismile');
+        $subject = __('Test Email from Kilismile Organization', 'kilismile');
         $message = $this->get_basic_email_template('test', array(
             'test_time' => current_time('F j, Y g:i A'),
             'server_info' => $_SERVER['SERVER_NAME'] ?? 'Unknown'
@@ -887,7 +887,7 @@ echo $this->get_email_header();
         
         // From Name
         $wp_customize->add_setting('kilismile_from_name', array(
-            'default'           => 'Kili Smile Organization',
+            'default'           => 'Kilismile Organization',
             'sanitize_callback' => 'sanitize_text_field',
         ));
         
@@ -1044,3 +1044,5 @@ function kilismile_send_bulk_newsletter($newsletter_id, $subject, $content) {
 }
 
 ?>
+
+

@@ -458,15 +458,12 @@
             $('#newsletter-message').fadeOut(500);
         }, 8000);
         
-        // Newsletter item hover effects with better performance
-        $('.newsletter-item').hover(
-            function() {
-                $(this).addClass('hovered');
-            },
-            function() {
-                $(this).removeClass('hovered');
-            }
-        );
+        // Newsletter item hover effects with modern event handlers
+        $('.newsletter-item').on('mouseenter', function() {
+            $(this).addClass('hovered');
+        }).on('mouseleave', function() {
+            $(this).removeClass('hovered');
+        });
         
         // Accessibility improvements
         $('.modern-form input, .modern-form button').on('focus', function() {
@@ -847,3 +844,5 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.head.appendChild(style);
 });
+
+

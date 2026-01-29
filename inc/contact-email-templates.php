@@ -31,7 +31,7 @@ function kilismile_send_contact_form($form_data) {
     }
     
     // Send notification to admin
-    $admin_email = get_option('admin_email');
+    $admin_email = 'contact@kilismile.org';
     $subject = sprintf(__('[%s] New Contact Form Submission: %s', 'kilismile'), 
                       get_bloginfo('name'), 
                       $form_data['subject']);
@@ -67,7 +67,7 @@ function kilismile_send_contact_form($form_data) {
         'organization_name' => get_bloginfo('name'),
         'website_url' => home_url(),
         'organization_email' => get_theme_mod('kilismile_email', 'kilismile21@gmail.com'),
-        'organization_phone' => get_theme_mod('kilismile_phone', '0763495575/0735495575')
+        'organization_phone' => get_theme_mod('kilismile_phone', '+255763495575/+255735495575')
     );
     
     $auto_reply_sent = $email_system->send_email(
@@ -276,7 +276,7 @@ add_action('init', function() {
         </div>
         
         <div class="footer">
-            <p><strong>Kili Smile Organization</strong></p>
+            <p><strong>Kilismile Organization</strong></p>
             <p>"No health without oral health"</p>
             <p>Improving oral health in Tanzania through education, prevention, and community outreach.</p>
             <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
@@ -292,3 +292,5 @@ add_action('init', function() {
 });
 
 ?>
+
+

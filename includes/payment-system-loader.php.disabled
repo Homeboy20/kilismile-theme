@@ -1,0 +1,114 @@
+<?php
+/**
+ * KiliSmile Payment System Loader
+ *
+ * @package KiliSmile
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Load all payment system files
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-donation-db.php';
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-payment-gateway.php';
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-paypal-gateway.php';
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-mobile-money-gateway.php';
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-selcom-gateway.php';
+require_once get_template_directory() . '/includes/payment-system/class-kilismile-donation-handler.php';
+
+// Load bridge functions for backward compatibility with legacy code
+require_once get_template_directory() . '/includes/payment-system/bridge-functions.php';
+
+// Load enhanced payment system integration
+$enhanced_integration_file = get_template_directory() . '/includes/payment-system/class-kilismile-enhanced-payment-integration.php';
+if (file_exists($enhanced_integration_file)) {
+    require_once $enhanced_integration_file;
+}
+
+// Register the shortcodes with high priority to override any existing ones
+add_shortcode('kilismile_donation_form', 'kilismile_donation_form_shortcode', 20);
+add_shortcode('kilismile_donation_progress', 'kilismile_donation_progress_shortcode', 20);
+
+// Remove any existing shortcodes to prevent duplication
+add_action('init', function() {
+    // We'll remove and re-add with our versions at a higher priority
+    remove_shortcode('kilismile_donation');
+    add_shortcode('kilismile_donation', 'kilismile_donation_form_shortcode', 20);
+}, 5);
+
+/**
+ * Replace the old payment system with the new one
+ */
+function kilismile_replace_old_payment_system() {
+    // Remove the old payment system global if it exists
+    if (isset($GLOBALS['kilismile_payment_system'])) {
+        unset($GLOBALS['kilismile_payment_system']);
+    }
+    
+    // Remove old payment system hooks to prevent conflicts
+    $old_payment_system = new KiliSmile_Payment_System();
+    remove_action('init', array($old_payment_system, 'init'));
+    remove_action('wp_enqueue_scripts', array($old_payment_system, 'enqueue_payment_scripts'));
+    remove_action('wp_ajax_kilismile_process_donation', array($old_payment_system, 'handle_donation_ajax'));
+    remove_action('wp_ajax_nopriv_kilismile_process_donation', array($old_payment_system, 'handle_donation_ajax'));
+    remove_action('wp_ajax_kilismile_verify_payment', array($old_payment_system, 'handle_payment_verification'));
+    remove_action('wp_ajax_nopriv_kilismile_verify_payment', array($old_payment_system, 'handle_payment_verification'));
+    
+    // Maybe run the database migration from old to new schema
+    add_action('init', 'kilismile_maybe_migrate_donation_data');
+}
+add_action('after_setup_theme', 'kilismile_replace_old_payment_system');
+
+/**
+ * Run the database migration if needed
+ */
+function kilismile_maybe_migrate_donation_data() {
+    // Check if migration has already been run
+    $migration_done = get_option('kilismile_donation_data_migrated', false);
+    
+    if (!$migration_done) {
+        // Run the migration
+        KiliSmile_Donation_DB::migrate_old_data();
+        
+        // Mark migration as complete
+        update_option('kilismile_donation_data_migrated', true);
+    }
+}
+
+/**
+ * Update the donation form shortcode to use the new system
+ */
+function kilismile_donation_form_shortcode($atts) {
+    global $kilismile_donation_handler;
+    
+    if (isset($kilismile_donation_handler) && method_exists($kilismile_donation_handler, 'donation_form_shortcode')) {
+        return $kilismile_donation_handler->donation_form_shortcode($atts);
+    }
+    
+    // Fallback to old system if something goes wrong
+    if (function_exists('_kilismile_legacy_donation_form')) {
+        return _kilismile_legacy_donation_form($atts);
+    }
+    
+    return '';
+}
+
+/**
+ * Add donation progress bar shortcode
+ */
+function kilismile_donation_progress_shortcode($atts) {
+    global $kilismile_donation_handler;
+    
+    if (isset($kilismile_donation_handler) && method_exists($kilismile_donation_handler, 'donation_progress_shortcode')) {
+        return $kilismile_donation_handler->donation_progress_shortcode($atts);
+    }
+    
+    if (function_exists('_kilismile_legacy_donation_progress_bar')) {
+        $currency = isset($atts['currency']) ? $atts['currency'] : 'USD';
+        return _kilismile_legacy_donation_progress_bar($currency);
+    }
+    
+    return '';
+}

@@ -1,13 +1,6 @@
 <?php
-/**    <!-- Hero Section -->
-    <section class="programs-hero" style="background: var(--light-gray); color: var(--dark-green); padding: 120px 0 80px; text-align: center; border-bottom: 4px solid var(--primary-green);">
-        <div class="container">
-            <h1 style="font-size: 3.5rem; margin-bottom: 20px; color: var(--dark-green); font-weight: 700;">
-                <?php _e('Our Programs', 'kilismile'); ?>
-            </h1>
-            <p style="font-size: 1.3rem; max-width: 800px; margin: 0 auto; color: var(--text-secondary); line-height: 1.6;">
-                <?php _e('Comprehensive health education and community development programs designed to create lasting positive change in Tanzania.', 'kilismile'); ?>
-            </p>ate Name: Programs Page
+/**
+ * Template Name: Programs Page
  *
  * @package KiliSmile
  * @version 1.0.0
@@ -17,7 +10,7 @@ get_header(); ?>
 
 <main id="main" class="site-main">
     <!-- Hero Section -->
-    <section class="programs-hero" style="background: linear-gradient(rgba(45, 90, 65, 0.9), rgba(76, 175, 80, 0.9)), url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1920 500%22><path fill=%22%234CAF50%22 d=%22M0,150 Q480,50 960,150 T1920,150 L1920,500 L0,500 Z%22/></svg>'); background-size: cover; background-position: center; padding: 120px 0 80px; color: white; text-align: center;">
+    <section class="programs-hero" style="background: var(--dark-green); padding: 120px 0 80px; color: white; text-align: center;">
         <div class="container">
             <h1 style="font-size: 3.5rem; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                 <?php _e('Our Programs', 'kilismile'); ?>
@@ -38,6 +31,83 @@ get_header(); ?>
                     <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 5px;">50,000+</div>
                     <div style="opacity: 0.9;"><?php _e('People Reached', 'kilismile'); ?></div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Activities Plan -->
+    <section class="program-activities" style="padding: 60px 0; background: white; border-bottom: 1px solid var(--border-color);">
+        <div class="container">
+            <h2 style="text-align: center; color: var(--dark-green); font-size: 2rem; margin-bottom: 15px;">
+                <?php _e('Upcoming Activities Plan', 'kilismile'); ?>
+            </h2>
+            <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 30px; line-height: 1.6;">
+                <?php _e('Planned activities with dates and locations for each program.', 'kilismile'); ?>
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <?php
+                $programs_plan_query = new WP_Query(array(
+                    'post_type' => 'programs',
+                    'posts_per_page' => -1,
+                    'meta_query' => array(
+                        array(
+                            'key' => '_program_activity_plan',
+                            'value' => '',
+                            'compare' => '!='
+                        )
+                    )
+                ));
+
+                if ($programs_plan_query->have_posts()) :
+                    while ($programs_plan_query->have_posts()) : $programs_plan_query->the_post();
+                        $activity_plan = get_post_meta(get_the_ID(), '_program_activity_plan', true);
+                        if (empty($activity_plan)) {
+                            $title = strtolower(get_the_title());
+                            if (strpos($title, 'non communicable disease screening program') !== false) {
+                                $activity_plan = "2026-03-14 | Moshi | Non communicable disease screening\n2026-03-15 | Moshi | Non communicable disease screening\n2026-03-16 | Moshi | Non communicable disease screening";
+                            } elseif (strpos($title, 'school oral health program') !== false) {
+                                $activity_plan = "2026-03-17 | Moshi | School oral health program\n2026-03-18 | Moshi | School oral health program\n2026-03-19 | Moshi | School oral health program";
+                            }
+                        }
+                        $lines = array_filter(array_map('trim', explode("\n", (string) $activity_plan)));
+                        if (empty($lines)) {
+                            continue;
+                        }
+                        ?>
+                        <div style="background: var(--light-gray); padding: 20px; border-radius: 12px; border: 1px solid rgba(76, 175, 80, 0.12);">
+                            <h3 style="margin: 0 0 12px; color: var(--dark-green); font-size: 1.1rem;">
+                                <?php the_title(); ?>
+                            </h3>
+                            <ul style="list-style: none; margin: 0; padding: 0; display: grid; gap: 10px;">
+                                <?php foreach ($lines as $line) :
+                                    $parts = array_map('trim', explode('|', $line));
+                                    $date = $parts[0] ?? '';
+                                    $location = $parts[1] ?? '';
+                                    $activity = $parts[2] ?? '';
+                                    ?>
+                                    <li style="background: white; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <div style="font-weight: 600; color: var(--primary-green); font-size: 0.9rem;">
+                                            <?php echo esc_html($date); ?>
+                                        </div>
+                                        <div style="color: var(--dark-green); font-size: 0.95rem; margin: 2px 0;">
+                                            <?php echo esc_html($activity); ?>
+                                        </div>
+                                        <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                                            <?php echo esc_html($location); ?>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <?php
+                    endwhile;
+                    wp_reset_postdata();
+                else : ?>
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <?php _e('No activity plans have been added yet.', 'kilismile'); ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -338,7 +408,7 @@ get_header(); ?>
                    style="display: inline-block; padding: 15px 30px; background: white; color: var(--primary-green); text-decoration: none; border-radius: 30px; font-weight: 600; transition: all 0.3s ease;">
                     <?php _e('Volunteer', 'kilismile'); ?>
                 </a>
-                <a href="<?php echo esc_url(home_url('/donate')); ?>" 
+                <a href="<?php echo esc_url(home_url('/donation')); ?>" 
                    class="btn btn-outline" 
                    style="display: inline-block; padding: 15px 30px; background: transparent; color: white; text-decoration: none; border: 2px solid white; border-radius: 30px; font-weight: 600; transition: all 0.3s ease;">
                     <?php _e('Support Our Programs', 'kilismile'); ?>
@@ -505,3 +575,5 @@ document.head.appendChild(style);
 </style>
 
 <?php get_footer(); ?>
+
+

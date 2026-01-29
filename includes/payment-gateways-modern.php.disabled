@@ -1,0 +1,707 @@
+<?php
+/**
+ * Modern Payment Gateway Base Class
+ * 
+ * Abstract base class for all payment gateway implementations
+ * providing a standardized interface and common functionality.
+ *
+ * @package KiliSmile
+ * @version 2.0.0
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Abstract Payment Gateway Base Class
+ */
+abstract class KiliSmile_Payment_Gateway_Base {
+    
+    protected $id;
+    protected $name;
+    protected $description;
+    protected $icon;
+    protected $supports = array();
+    protected $enabled = true;
+    protected $test_mode = false;
+    protected $settings = array();
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->init();
+        $this->load_settings();
+    }
+    
+    /**
+     * Initialize gateway - must be implemented by child classes
+     */
+    abstract protected function init();
+    
+    /**
+     * Process payment - must be implemented by child classes
+     */
+    abstract public function process_payment($donation_id, $donation_data);
+    
+    /**
+     * Check if gateway is available
+     */
+    public function is_available() {
+        return $this->enabled && $this->validate_credentials();
+    }
+    
+    /**
+     * Validate gateway credentials
+     */
+    abstract protected function validate_credentials();
+    
+    /**
+     * Get gateway ID
+     */
+    public function get_id() {
+        return $this->id;
+    }
+    
+    /**
+     * Get gateway name
+     */
+    public function get_name() {
+        return $this->name;
+    }
+    
+    /**
+     * Get gateway description
+     */
+    public function get_description() {
+        return $this->description;
+    }
+    
+    /**
+     * Get gateway icon
+     */
+    public function get_icon() {
+        return $this->icon;
+    }
+    
+    /**
+     * Check if gateway supports feature
+     */
+    public function supports($feature) {
+        return in_array($feature, $this->supports);
+    }
+    
+    /**
+     * Check if gateway supports recurring payments
+     */
+    public function supports_recurring() {
+        return $this->supports('recurring');
+    }
+    
+    /**
+     * Load gateway settings
+     */
+    protected function load_settings() {
+        $this->settings = get_option('kilismile_payment_' . $this->id . '_settings', array());
+    }
+    
+    /**
+     * Get setting value
+     */
+    protected function get_setting($key, $default = null) {
+        return isset($this->settings[$key]) ? $this->settings[$key] : $default;
+    }
+    
+    /**
+     * Update setting
+     */
+    protected function update_setting($key, $value) {
+        $this->settings[$key] = $value;
+        update_option('kilismile_payment_' . $this->id . '_settings', $this->settings);
+    }
+    
+    /**
+     * Check payment status (optional override)
+     */
+    public function check_payment_status($donation_id, $donation_data) {
+        return array(
+            'status' => 'unknown',
+            'message' => __('Status check not implemented for this gateway.', 'kilismile')
+        );
+    }
+    
+    /**
+     * Handle webhook (optional override)
+     */
+    public function handle_webhook() {
+        return array(
+            'success' => false,
+            'message' => __('Webhook not implemented for this gateway.', 'kilismile')
+        );
+    }
+    
+    /**
+     * Log gateway activity
+     */
+    protected function log($message, $level = 'info', $data = array()) {
+        error_log(sprintf(
+            '[%s] %s Gateway: %s %s',
+            strtoupper($level),
+            $this->name,
+            $message,
+            !empty($data) ? ' - Data: ' . wp_json_encode($data) : ''
+        ));
+    }
+    
+    /**
+     * Format amount for gateway
+     */
+    protected function format_amount($amount, $currency) {
+        // Most gateways expect amounts in smallest currency unit
+        if ($currency === 'USD') {
+            return intval($amount * 100); // Convert to cents
+        } elseif ($currency === 'TZS') {
+            return intval($amount); // TZS is already in smallest unit
+        }
+        
+        return $amount;
+    }
+    
+    /**
+     * Make HTTP request with proper error handling
+     */
+    protected function make_request($url, $args = array()) {
+        $defaults = array(
+            'timeout' => 30,
+            'user-agent' => 'KiliSmile/' . get_option('kilismile_version', '1.0.0'),
+            'headers' => array(
+                'Content-Type' => 'application/json'
+            )
+        );
+        
+        $args = wp_parse_args($args, $defaults);
+        
+        $response = wp_remote_request($url, $args);
+        
+        if (is_wp_error($response)) {
+            $this->log('HTTP request failed: ' . $response->get_error_message(), 'error');
+            return false;
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        if ($status_code >= 400) {
+            $this->log('HTTP request failed with status: ' . $status_code, 'error', array(
+                'response_body' => $body
+            ));
+            return false;
+        }
+        
+        return array(
+            'status_code' => $status_code,
+            'body' => $body,
+            'data' => json_decode($body, true)
+        );
+    }
+}
+
+/**
+ * Modern PayPal Gateway
+ */
+class KiliSmile_PayPal_Gateway_Modern extends KiliSmile_Payment_Gateway_Base {
+    
+    protected function init() {
+        $this->id = 'paypal';
+        $this->name = __('PayPal', 'kilismile');
+        $this->description = __('Pay securely with PayPal', 'kilismile');
+        $this->icon = 'fab fa-paypal';
+        $this->supports = array('recurring', 'refunds');
+        
+        $this->test_mode = $this->get_setting('test_mode', true);
+        $this->enabled = $this->get_setting('enabled', true);
+    }
+    
+    protected function validate_credentials() {
+        $client_id = $this->get_setting('client_id');
+        $client_secret = $this->get_setting('client_secret');
+        
+        return !empty($client_id) && !empty($client_secret);
+    }
+    
+    public function process_payment($donation_id, $donation_data) {
+        try {
+            $access_token = $this->get_access_token();
+            if (!$access_token) {
+                throw new Exception(__('Failed to authenticate with PayPal.', 'kilismile'));
+            }
+            
+            if ($donation_data['recurring']) {
+                return $this->create_subscription($donation_id, $donation_data, $access_token);
+            } else {
+                return $this->create_order($donation_id, $donation_data, $access_token);
+            }
+            
+        } catch (Exception $e) {
+            $this->log('Payment processing failed: ' . $e->getMessage(), 'error');
+            
+            return array(
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => 'PAYPAL_ERROR'
+            );
+        }
+    }
+    
+    private function get_access_token() {
+        $client_id = $this->get_setting('client_id');
+        $client_secret = $this->get_setting('client_secret');
+        
+        $base_url = $this->test_mode ? 
+            'https://api.sandbox.paypal.com' : 
+            'https://api.paypal.com';
+        
+        $response = $this->make_request($base_url . '/v1/oauth2/token', array(
+            'method' => 'POST',
+            'headers' => array(
+                'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret),
+                'Content-Type' => 'application/x-www-form-urlencoded'
+            ),
+            'body' => 'grant_type=client_credentials'
+        ));
+        
+        if ($response && isset($response['data']['access_token'])) {
+            return $response['data']['access_token'];
+        }
+        
+        return false;
+    }
+    
+    private function create_order($donation_id, $donation_data, $access_token) {
+        $base_url = $this->test_mode ? 
+            'https://api.sandbox.paypal.com' : 
+            'https://api.paypal.com';
+        
+        $order_data = array(
+            'intent' => 'CAPTURE',
+            'purchase_units' => array(
+                array(
+                    'reference_id' => $donation_id,
+                    'description' => sprintf(__('Donation to %s', 'kilismile'), get_bloginfo('name')),
+                    'amount' => array(
+                        'currency_code' => $donation_data['currency'],
+                        'value' => number_format($donation_data['amount'], 2, '.', '')
+                    )
+                )
+            ),
+            'payment_source' => array(
+                'paypal' => array(
+                    'experience_context' => array(
+                        'payment_method_preference' => 'IMMEDIATE_PAYMENT_REQUIRED',
+                        'brand_name' => get_bloginfo('name'),
+                        'locale' => 'en-US',
+                        'landing_page' => 'LOGIN',
+                        'shipping_preference' => 'NO_SHIPPING',
+                        'user_action' => 'PAY_NOW',
+                        'return_url' => home_url('/donation-success/?donation_id=' . $donation_id),
+                        'cancel_url' => home_url('/donation-cancelled/?donation_id=' . $donation_id)
+                    )
+                )
+            )
+        );
+        
+        $response = $this->make_request($base_url . '/v2/checkout/orders', array(
+            'method' => 'POST',
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $access_token,
+                'Content-Type' => 'application/json',
+                'PayPal-Request-Id' => $donation_id
+            ),
+            'body' => wp_json_encode($order_data)
+        ));
+        
+        if ($response && isset($response['data']['id'])) {
+            $order = $response['data'];
+            
+            // Find approval URL
+            $approval_url = null;
+            foreach ($order['links'] as $link) {
+                if ($link['rel'] === 'approve') {
+                    $approval_url = $link['href'];
+                    break;
+                }
+            }
+            
+            return array(
+                'success' => true,
+                'message' => __('PayPal order created successfully.', 'kilismile'),
+                'redirect_url' => $approval_url,
+                'payment_data' => array(
+                    'paypal_order_id' => $order['id'],
+                    'status' => $order['status']
+                )
+            );
+        }
+        
+        throw new Exception(__('Failed to create PayPal order.', 'kilismile'));
+    }
+    
+    private function create_subscription($donation_id, $donation_data, $access_token) {
+        // PayPal subscription implementation
+        // This would involve creating a product and plan first, then the subscription
+        
+        return array(
+            'success' => false,
+            'message' => __('PayPal recurring donations not yet implemented.', 'kilismile'),
+            'error_code' => 'NOT_IMPLEMENTED'
+        );
+    }
+    
+    public function check_payment_status($donation_id, $donation_data) {
+        $access_token = $this->get_access_token();
+        if (!$access_token) {
+            return array('status' => 'unknown', 'message' => 'Cannot authenticate with PayPal');
+        }
+        
+        // Implementation would check order status with PayPal API
+        return array('status' => 'unknown', 'message' => 'Status check not implemented');
+    }
+}
+
+/**
+ * Modern Selcom Gateway (Tanzania)
+ */
+class KiliSmile_Selcom_Gateway_Modern extends KiliSmile_Payment_Gateway_Base {
+    
+    protected function init() {
+        $this->id = 'selcom';
+        $this->name = __('Selcom', 'kilismile');
+        $this->description = __('Pay with mobile money or bank transfer', 'kilismile');
+        $this->icon = 'fas fa-mobile-alt';
+        $this->supports = array('mobile_money', 'bank_transfer');
+        
+        $this->test_mode = $this->get_setting('test_mode', true);
+        $this->enabled = $this->get_setting('enabled', true);
+    }
+    
+    protected function validate_credentials() {
+        $api_key = $this->get_setting('api_key');
+        $api_secret = $this->get_setting('api_secret');
+        
+        return !empty($api_key) && !empty($api_secret);
+    }
+    
+    public function process_payment($donation_id, $donation_data) {
+        try {
+            $base_url = $this->test_mode ? 
+                'https://apigw.selcommobile.com/v1' : 
+                'https://api.selcommobile.com/v1';
+            
+            $payment_data = array(
+                'vendor' => $this->get_setting('vendor_id'),
+                'order_id' => $donation_id,
+                'buyer_email' => $donation_data['email'],
+                'buyer_name' => $donation_data['first_name'] . ' ' . $donation_data['last_name'],
+                'buyer_phone' => $donation_data['phone'],
+                'amount' => $this->format_amount($donation_data['amount'], $donation_data['currency']),
+                'currency' => $donation_data['currency'],
+                'webhook' => home_url('/wp-admin/admin-ajax.php?action=selcom_webhook'),
+                'cancel_url' => home_url('/donation-cancelled/?donation_id=' . $donation_id),
+                'success_url' => home_url('/donation-success/?donation_id=' . $donation_id),
+                'fail_url' => home_url('/donation-failed/?donation_id=' . $donation_id)
+            );
+            
+            $headers = $this->generate_selcom_headers($payment_data);
+            
+            $response = $this->make_request($base_url . '/checkout', array(
+                'method' => 'POST',
+                'headers' => $headers,
+                'body' => wp_json_encode($payment_data)
+            ));
+            
+            if ($response && isset($response['data']['payment_url'])) {
+                return array(
+                    'success' => true,
+                    'message' => __('Selcom payment initiated.', 'kilismile'),
+                    'redirect_url' => $response['data']['payment_url'],
+                    'payment_data' => array(
+                        'selcom_transaction_id' => $response['data']['transid'],
+                        'payment_url' => $response['data']['payment_url']
+                    )
+                );
+            }
+            
+            throw new Exception(__('Failed to create Selcom payment.', 'kilismile'));
+            
+        } catch (Exception $e) {
+            $this->log('Selcom payment failed: ' . $e->getMessage(), 'error');
+            
+            return array(
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => 'SELCOM_ERROR'
+            );
+        }
+    }
+    
+    private function generate_selcom_headers($data) {
+        $api_key = $this->get_setting('api_key');
+        $api_secret = $this->get_setting('api_secret');
+        
+        $timestamp = time();
+        $signed_fields = $api_key . $timestamp . wp_json_encode($data);
+        $signature = hash_hmac('sha256', $signed_fields, $api_secret);
+        
+        return array(
+            'Authorization' => 'SELCOM ' . base64_encode($api_key . ':' . $signature),
+            'Timestamp' => $timestamp,
+            'Content-Type' => 'application/json'
+        );
+    }
+    
+    public function handle_webhook() {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        if (!$data) {
+            return array('success' => false, 'message' => 'Invalid webhook data');
+        }
+        
+        // Verify webhook signature
+        if (!$this->verify_webhook_signature($input)) {
+            return array('success' => false, 'message' => 'Invalid webhook signature');
+        }
+        
+        // Process webhook based on status
+        $donation_id = $data['order_id'] ?? null;
+        $status = $data['payment_status'] ?? 'unknown';
+        
+        if ($donation_id) {
+            $db = new KiliSmile_Donation_Database();
+            
+            switch (strtolower($status)) {
+                case 'completed':
+                case 'success':
+                    $db->update_donation_status($donation_id, 'completed', $data['transid'] ?? null);
+                    break;
+                case 'failed':
+                case 'cancelled':
+                    $db->update_donation_status($donation_id, 'failed');
+                    break;
+                case 'pending':
+                    $db->update_donation_status($donation_id, 'processing');
+                    break;
+            }
+            
+            $db->log_event($donation_id, 'webhook_received', $data);
+        }
+        
+        return array('success' => true, 'message' => 'Webhook processed');
+    }
+    
+    private function verify_webhook_signature($payload) {
+        $signature = $_SERVER['HTTP_SIGNATURE'] ?? '';
+        $api_secret = $this->get_setting('api_secret');
+        
+        $expected_signature = hash_hmac('sha256', $payload, $api_secret);
+        
+        return hash_equals($expected_signature, $signature);
+    }
+}
+
+/**
+ * Mobile Money Gateways
+ */
+class KiliSmile_MPesa_Gateway_Modern extends KiliSmile_Payment_Gateway_Base {
+    
+    protected function init() {
+        $this->id = 'mpesa';
+        $this->name = __('M-Pesa', 'kilismile');
+        $this->description = __('Pay with Vodacom M-Pesa', 'kilismile');
+        $this->icon = 'fas fa-mobile-alt';
+        $this->supports = array('mobile_money');
+    }
+    
+    protected function validate_credentials() {
+        return true; // Usually integrated through Selcom
+    }
+    
+    public function process_payment($donation_id, $donation_data) {
+        // M-Pesa is typically processed through Selcom or direct USSD
+        return array(
+            'success' => true,
+            'message' => __('Please dial *150*00# to complete your M-Pesa payment.', 'kilismile'),
+            'payment_data' => array(
+                'ussd_code' => '*150*00#',
+                'instructions' => __('Follow the prompts to complete payment', 'kilismile')
+            )
+        );
+    }
+}
+
+class KiliSmile_AirtelMoney_Gateway_Modern extends KiliSmile_Payment_Gateway_Base {
+    
+    protected function init() {
+        $this->id = 'airtel_money';
+        $this->name = __('Airtel Money', 'kilismile');
+        $this->description = __('Pay with Airtel Money', 'kilismile');
+        $this->icon = 'fas fa-mobile-alt';
+        $this->supports = array('mobile_money');
+    }
+    
+    protected function validate_credentials() {
+        return true;
+    }
+    
+    public function process_payment($donation_id, $donation_data) {
+        return array(
+            'success' => true,
+            'message' => __('Please dial *150*60# to complete your Airtel Money payment.', 'kilismile'),
+            'payment_data' => array(
+                'ussd_code' => '*150*60#',
+                'instructions' => __('Follow the prompts to complete payment', 'kilismile')
+            )
+        );
+    }
+}
+
+class KiliSmile_TigoPesa_Gateway_Modern extends KiliSmile_Payment_Gateway_Base {
+    
+    protected function init() {
+        $this->id = 'tigo_pesa';
+        $this->name = __('Tigo Pesa', 'kilismile');
+        $this->description = __('Pay with Tigo Pesa', 'kilismile');
+        $this->icon = 'fas fa-mobile-alt';
+        $this->supports = array('mobile_money');
+    }
+    
+    protected function validate_credentials() {
+        return true;
+    }
+    
+    public function process_payment($donation_id, $donation_data) {
+        return array(
+            'success' => true,
+            'message' => __('Please dial *150*01# to complete your Tigo Pesa payment.', 'kilismile'),
+            'payment_data' => array(
+                'ussd_code' => '*150*01#',
+                'instructions' => __('Follow the prompts to complete payment', 'kilismile')
+            )
+        );
+    }
+}
+
+/**
+ * Payment Gateway Factory Class
+ * 
+ * Factory class for creating and managing payment gateway instances
+ */
+class KiliSmile_Payment_Gateway_Factory {
+    
+    private static $gateways = array();
+    
+    /**
+     * Initialize all payment gateways
+     */
+    public function __construct() {
+        $this->register_gateways();
+    }
+    
+    /**
+     * Register all available payment gateways
+     */
+    private function register_gateways() {
+        self::$gateways = array(
+            'paypal' => 'KiliSmile_PayPal_Gateway_Modern',
+            'selcom' => 'KiliSmile_Selcom_Gateway_Modern',
+            'mpesa' => 'KiliSmile_MPesa_Gateway_Modern',
+            'airtel_money' => 'KiliSmile_AirtelMoney_Gateway_Modern',
+            'tigo_pesa' => 'KiliSmile_TigoPesa_Gateway_Modern'
+        );
+    }
+    
+    /**
+     * Get gateway instance by ID
+     */
+    public function get_gateway($gateway_id) {
+        if (!isset(self::$gateways[$gateway_id])) {
+            return false;
+        }
+        
+        $class_name = self::$gateways[$gateway_id];
+        
+        if (!class_exists($class_name)) {
+            return false;
+        }
+        
+        return new $class_name();
+    }
+    
+    /**
+     * Get all available gateways
+     */
+    public function get_available_gateways($currency = 'USD') {
+        $available = array();
+        
+        foreach (self::$gateways as $id => $class_name) {
+            if (class_exists($class_name)) {
+                $gateway = new $class_name();
+                
+                if ($gateway->is_available() && $this->supports_currency($gateway, $currency)) {
+                    $available[$id] = array(
+                        'id' => $id,
+                        'name' => $gateway->get_name(),
+                        'description' => $gateway->get_description(),
+                        'icon' => $gateway->get_icon(),
+                        'gateway' => $gateway
+                    );
+                }
+            }
+        }
+        
+        return $available;
+    }
+    
+    /**
+     * Check if gateway supports currency
+     */
+    private function supports_currency($gateway, $currency) {
+        // PayPal supports both USD and TZS
+        if (get_class($gateway) === 'KiliSmile_PayPal_Gateway_Modern') {
+            return true;
+        }
+        
+        // Selcom and mobile money are for TZS only
+        if (in_array(get_class($gateway), array(
+            'KiliSmile_Selcom_Gateway_Modern',
+            'KiliSmile_MPesa_Gateway_Modern',
+            'KiliSmile_AirtelMoney_Gateway_Modern',
+            'KiliSmile_TigoPesa_Gateway_Modern'
+        ))) {
+            return $currency === 'TZS';
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get gateway configuration for frontend
+     */
+    public function get_gateway_config($currency = 'USD') {
+        $gateways = $this->get_available_gateways($currency);
+        $config = array();
+        
+        foreach ($gateways as $id => $gateway_data) {
+            $config[] = array(
+                'id' => $id,
+                'name' => $gateway_data['name'],
+                'description' => $gateway_data['description'],
+                'icon' => $gateway_data['icon']
+            );
+        }
+        
+        return $config;
+    }
+}

@@ -18,6 +18,46 @@ function kilismile_contact_customizer($wp_customize) {
         'description' => __('Customize the contact page information and social media links.', 'kilismile'),
     ));
 
+    // Primary Contact Details
+    $wp_customize->add_setting('contact_details_email', array(
+        'default'           => 'kilismile21@gmail.com',
+        'sanitize_callback' => 'sanitize_email',
+        'transport'         => 'refresh',
+    ));
+
+    $wp_customize->add_control('contact_details_email', array(
+        'label'    => __('Contact Email (Contact Page)', 'kilismile'),
+        'section'  => 'kilismile_contact_section',
+        'type'     => 'email',
+        'priority' => 5,
+    ));
+
+    $wp_customize->add_setting('contact_details_phone', array(
+        'default'           => '+255763495575/+255735495575',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+
+    $wp_customize->add_control('contact_details_phone', array(
+        'label'    => __('Contact Phone (Contact Page)', 'kilismile'),
+        'section'  => 'kilismile_contact_section',
+        'type'     => 'text',
+        'priority' => 6,
+    ));
+
+    $wp_customize->add_setting('contact_details_address', array(
+        'default'           => 'P.O. Box 928, Moshi, Kilimanjaro, Tanzania',
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'refresh',
+    ));
+
+    $wp_customize->add_control('contact_details_address', array(
+        'label'    => __('Contact Address (Contact Page)', 'kilismile'),
+        'section'  => 'kilismile_contact_section',
+        'type'     => 'textarea',
+        'priority' => 7,
+    ));
+
     // Office Contact Settings
     $wp_customize->add_setting('contact_office_title', array(
         'default'           => 'Visit Office',
@@ -87,7 +127,7 @@ function kilismile_contact_customizer($wp_customize) {
     ));
 
     $wp_customize->add_setting('contact_phone_content', array(
-        'default'           => '+255 763 495 575<br>24/7 for emergencies',
+        'default'           => '+255763495575/+255735495575<br>24/7 for emergencies',
         'sanitize_callback' => 'wp_kses_post',
         'transport'         => 'refresh',
     ));
@@ -292,7 +332,7 @@ function kilismile_contact_customizer($wp_customize) {
 
     // Quick Contact Section Settings
     $wp_customize->add_setting('quick_contact_phone', array(
-        'default'           => '+255 763 495 575',
+        'default'           => '+255763495575/+255735495575',
         'sanitize_callback' => 'sanitize_text_field',
         'transport'         => 'refresh',
     ));
@@ -319,3 +359,5 @@ function kilismile_contact_customizer($wp_customize) {
 }
 
 add_action('customize_register', 'kilismile_contact_customizer');
+
+

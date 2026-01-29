@@ -2,7 +2,7 @@
 
 ## How to Customize Your Logo
 
-The Kili Smile theme now includes advanced logo customization options available through the WordPress Customizer.
+The Kilismile theme now includes advanced logo customization options available through the WordPress Customizer.
 
 ### Accessing Logo Controls
 
@@ -69,3 +69,5 @@ If logo customization isn't working:
 ---
 
 **Note**: This replaces the previous frontend gear button system with a more professional WordPress admin integration.
+
+

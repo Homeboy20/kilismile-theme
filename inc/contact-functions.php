@@ -52,6 +52,12 @@ function kilismile_handle_contact_form() {
         kilismile_send_contact_auto_reply($form_data);
         
         if ($email_sent) {
+            error_log(sprintf(
+                'KiliSmile Contact Form: email sent to %s (submission_id=%s, from=%s)',
+                'contact@kilismile.org',
+                $submission_id ? $submission_id : 'n/a',
+                $form_data['email']
+            ));
             wp_redirect(add_query_arg('contact_success', '1', wp_get_referer()));
         } else {
             wp_redirect(add_query_arg('contact_error', 'email_failed', wp_get_referer()));
@@ -130,7 +136,7 @@ function kilismile_create_contact_table() {
  * Send Basic Contact Notification (Fallback)
  */
 function kilismile_send_basic_contact_notification($form_data) {
-    $admin_email = get_option('admin_email');
+    $admin_email = 'contact@kilismile.org';
     $site_name = get_bloginfo('name');
     
     $subject = sprintf(__('[%s] New Contact Form Submission: %s', 'kilismile'), $site_name, $form_data['subject']);
@@ -182,7 +188,7 @@ function kilismile_send_contact_auto_reply($form_data) {
     $message = sprintf(
         __('Hello %s,
 
-Thank you for contacting Kili Smile Organization. We have received your message and will respond as soon as possible.
+Thank you for contacting Kilismile Organization. We have received your message and will respond as soon as possible.
 
 Your message:
 Subject: %s
@@ -191,10 +197,10 @@ Subject: %s
 We typically respond within 24-48 hours during business days.
 
 Best regards,
-The Kili Smile Team
+The Kilismile Team
 
 --
-Kili Smile Organization
+Kilismile Organization
 "No health without oral health"
 Website: %s
 Email: %s
@@ -204,12 +210,12 @@ Phone: %s', 'kilismile'),
         $form_data['message'],
         home_url(),
         get_theme_mod('kilismile_email', 'kilismile21@gmail.com'),
-        get_theme_mod('kilismile_phone', '0763495575/0735495575')
+        get_theme_mod('kilismile_phone', '+255763495575/+255735495575')
     );
     
     $headers = array(
         'Content-Type: text/plain; charset=UTF-8',
-        'From: Kili Smile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
+        'From: Kilismile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
     );
     
     return wp_mail($form_data['email'], $subject, $message, $headers);
@@ -298,7 +304,7 @@ function kilismile_contact_form_shortcode($atts) {
                             <div>
                                 <strong><?php _e('Phone:', 'kilismile'); ?></strong>
                                 <a href="tel:<?php echo esc_attr(str_replace(array('/', ' '), '', get_theme_mod('kilismile_phone', '0763495575'))); ?>">
-                                    <?php echo esc_html(get_theme_mod('kilismile_phone', '0763495575/0735495575')); ?>
+                                    <?php echo esc_html(get_theme_mod('kilismile_phone', '+255763495575/+255735495575')); ?>
                                 </a>
                             </div>
                         </div>
@@ -370,7 +376,7 @@ function kilismile_contact_form_shortcode($atts) {
                         <label class="checkbox-label">
                             <input type="checkbox" name="contact_consent" value="yes" required>
                             <span class="checkmark"></span>
-                            <?php _e('I agree to the privacy policy and consent to being contacted by Kili Smile Organization regarding my inquiry.', 'kilismile'); ?>
+                            <?php _e('I agree to the privacy policy and consent to being contacted by Kilismile Organization regarding my inquiry.', 'kilismile'); ?>
                         </label>
                     </div>
                     
@@ -681,3 +687,5 @@ function kilismile_contact_submissions_page() {
 add_action('after_switch_theme', 'kilismile_create_contact_table');
 
 ?>
+
+

@@ -7,7 +7,12 @@
 
 get_header(); ?>
 
-<main id="main" class="site-main single-newsletter">
+<?php
+    $newsletter_page = get_page_by_path('newsletter');
+    $newsletter_archive_url = $newsletter_page ? get_permalink($newsletter_page) : home_url('/newsletter/');
+?>
+
+<main id="main" class="site-main single-newsletter-page">
     <?php while (have_posts()) : the_post(); ?>
         
         <article id="post-<?php the_ID(); ?>" <?php post_class('newsletter-article'); ?>>
@@ -16,7 +21,7 @@ get_header(); ?>
             <header class="newsletter-header">
                 <div class="container">
                     <div class="newsletter-meta">
-                        <a href="<?php echo home_url('/newsletter'); ?>" class="back-link">
+                        <a href="<?php echo esc_url($newsletter_archive_url); ?>" class="back-link">
                             <i class="fas fa-arrow-left"></i>
                             <?php _e('Back to Newsletter Archive', 'kilismile'); ?>
                         </a>
@@ -64,7 +69,7 @@ get_header(); ?>
                             </a>
                         <?php endif; ?>
                         
-                        <a href="mailto:?subject=<?php echo urlencode(get_the_title()); ?>&body=<?php echo urlencode(get_permalink()); ?>" class="btn btn-outline">
+                        <a href="mailto:?subject=<?php echo rawurlencode(get_the_title()); ?>&body=<?php echo rawurlencode(get_permalink()); ?>" class="btn btn-outline">
                             <i class="fas fa-envelope"></i>
                             <?php _e('Share via Email', 'kilismile'); ?>
                         </a>
@@ -100,7 +105,7 @@ get_header(); ?>
                             
                             <?php if ($prev_newsletter) : ?>
                                 <div class="nav-previous">
-                                    <a href="<?php echo get_permalink($prev_newsletter->ID); ?>" class="nav-link">
+                                    <a href="<?php echo esc_url(get_permalink($prev_newsletter->ID)); ?>" class="nav-link">
                                         <span class="nav-direction">
                                             <i class="fas fa-chevron-left"></i>
                                             <?php _e('Previous Newsletter', 'kilismile'); ?>
@@ -112,7 +117,7 @@ get_header(); ?>
                             
                             <?php if ($next_newsletter) : ?>
                                 <div class="nav-next">
-                                    <a href="<?php echo get_permalink($next_newsletter->ID); ?>" class="nav-link">
+                                    <a href="<?php echo esc_url(get_permalink($next_newsletter->ID)); ?>" class="nav-link">
                                         <span class="nav-direction">
                                             <?php _e('Next Newsletter', 'kilismile'); ?>
                                             <i class="fas fa-chevron-right"></i>
@@ -137,9 +142,13 @@ get_header(); ?>
                         <p><?php _e('Stay updated with our latest programs, success stories, and ways to get involved in improving oral health in Tanzania.', 'kilismile'); ?></p>
                     </div>
                     <div class="cta-action">
-                        <a href="<?php echo home_url('/newsletter#newsletter-subscription-form'); ?>" class="btn btn-primary">
+                        <a href="<?php echo esc_url(trailingslashit($newsletter_archive_url) . '#newsletter-subscription-form'); ?>" class="btn btn-primary">
                             <i class="fas fa-envelope"></i>
                             <?php _e('Subscribe Now', 'kilismile'); ?>
+                        </a>
+                        <a href="<?php echo esc_url(function_exists('kilismile_get_donation_page_url_legacy') ? kilismile_get_donation_page_url_legacy() : home_url('/donation/')); ?>" class="btn btn-outline">
+                            <i class="fas fa-heart"></i>
+                            <?php _e('Make a Donation', 'kilismile'); ?>
                         </a>
                     </div>
                 </div>
@@ -171,7 +180,7 @@ get_header(); ?>
                             <div class="related-newsletter-item">
                                 <div class="related-thumbnail">
                                     <?php if (has_post_thumbnail()) : ?>
-                                        <a href="<?php the_permalink(); ?>">
+                                        <a href="<?php echo esc_url(get_permalink()); ?>">
                                             <?php the_post_thumbnail('medium'); ?>
                                         </a>
                                     <?php else : ?>
@@ -192,14 +201,14 @@ get_header(); ?>
                                     </div>
                                     
                                     <h3 class="related-title">
-                                        <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+                                        <a href="<?php echo esc_url(get_permalink()); ?>"><?php the_title(); ?></a>
                                     </h3>
                                     
                                     <div class="related-excerpt">
                                         <?php echo wp_trim_words(get_the_excerpt(), 15); ?>
                                     </div>
                                     
-                                    <a href="<?php the_permalink(); ?>" class="read-more">
+                                    <a href="<?php echo esc_url(get_permalink()); ?>" class="read-more">
                                         <?php _e('Read More', 'kilismile'); ?>
                                         <i class="fas fa-arrow-right"></i>
                                     </a>
@@ -251,3 +260,5 @@ get_header(); ?>
 </style>
 
 <?php get_footer(); ?>
+
+

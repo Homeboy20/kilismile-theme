@@ -1,0 +1,402 @@
+<?php
+/**
+ * PayPal Integration for KiliSmile Theme
+ * Handles PayPal payment processing for USD donations
+ */
+
+if (!defined('ABSPATH')) exit;
+
+class KiliSmile_PayPal {
+    private $client_id;
+    private $client_secret;
+    private $sandbox_mode;
+    private $api_base;
+
+    public function __construct() {
+        $this->client_id = get_option('kilismile_paypal_client_id', '');
+        $this->client_secret = get_option('kilismile_paypal_client_secret', '');
+        $this->sandbox_mode = get_option('kilismile_paypal_sandbox', true);
+        
+        $this->api_base = $this->sandbox_mode 
+            ? 'https://api-m.sandbox.paypal.com'
+            : 'https://api-m.paypal.com';
+            
+        // AJAX hooks are now handled by the unified payment processor
+        // Keep the return handler as it's needed for PayPal redirects
+        if (function_exists('add_action')) {
+            add_action('init', array($this, 'handle_paypal_return'));
+        }
+    }
+
+    /**
+     * AJAX handler for processing PayPal payment
+     */
+    public function ajax_process_payment() {
+        check_ajax_referer('kilismile_payment_nonce', 'nonce');
+        
+        $amount = floatval($_POST['amount']);
+        $currency = sanitize_text_field($_POST['currency']);
+        $donor_name = sanitize_text_field($_POST['donor_name']);
+        $donor_email = sanitize_email($_POST['donor_email']);
+        
+        // Validate inputs
+        if (empty($amount) || $currency !== 'USD') {
+            wp_send_json_error(array('message' => 'Invalid payment data'));
+        }
+        
+        // Generate unique transaction reference
+        $transaction_ref = 'KS_PP_' . time() . '_' . wp_rand(1000, 9999);
+        
+        try {
+            $payment_url = $this->create_payment($amount, $currency, $transaction_ref, $donor_name, $donor_email);
+            
+            if ($payment_url) {
+                // Store transaction in database
+                $this->store_transaction($transaction_ref, array(
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'donor_name' => $donor_name,
+                    'donor_email' => $donor_email,
+                    'status' => 'pending'
+                ));
+                
+                wp_send_json_success(array(
+                    'redirect_url' => $payment_url,
+                    'transaction_id' => $transaction_ref
+                ));
+            } else {
+                wp_send_json_error(array('message' => 'Failed to create PayPal payment'));
+            }
+        } catch (Exception $e) {
+            wp_send_json_error(array('message' => $e->getMessage()));
+        }
+    }
+
+    /**
+     * Create PayPal payment
+     */
+    public function create_payment($amount, $currency, $reference, $donor_name, $donor_email) {
+        $access_token = $this->get_access_token();
+        
+        if (!$access_token) {
+            throw new Exception('Failed to get PayPal access token');
+        }
+
+        kilismile_payment_debug('paypal_create_start', [
+            'amount' => $amount,
+            'currency' => $currency,
+            'reference' => $reference
+        ]);
+        
+        $url = $this->api_base . '/v1/payments/payment';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $access_token
+        );
+        
+        // Build base success/cancel URLs and allow filtering
+        $base_success = home_url('/donation-success');
+        $base_cancel  = home_url('/donate');
+        $return_url = apply_filters('kilismile_paypal_success_url', add_query_arg(array(
+            'paypal_return' => '1',
+            'transaction_ref' => $reference
+        ), $base_success), $reference, $amount, $currency);
+        $cancel_url = apply_filters('kilismile_paypal_cancel_url', add_query_arg(array(
+            'paypal_cancel' => '1',
+            'transaction_ref' => $reference
+        ), $base_cancel), $reference, $amount, $currency);
+
+        $body = array(
+            'intent' => 'sale',
+            'redirect_urls' => array(
+                'return_url' => $return_url,
+                'cancel_url' => $cancel_url
+            ),
+            'payer' => array(
+                'payment_method' => 'paypal'
+            ),
+            'transactions' => array(
+                array(
+                    'amount' => array(
+                        'total' => number_format($amount, 2, '.', ''),
+                        'currency' => $currency
+                    ),
+                    'description' => 'KiliSmile Donation from ' . $donor_name,
+                    'invoice_number' => $reference,
+                    'item_list' => array(
+                        'items' => array(
+                            array(
+                                'name' => 'Donation to KiliSmile',
+                                'description' => 'Charitable donation',
+                                'quantity' => '1',
+                                'price' => number_format($amount, 2, '.', ''),
+                                'currency' => $currency
+                            )
+                        )
+                    )
+                )
+            )
+        );
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            kilismile_payment_debug('paypal_create_network_error', $response->get_error_message(), 'error');
+            throw new Exception('Network error: ' . $response->get_error_message());
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+        if ($response_code !== 201) {
+            $error_message = isset($data['message']) ? $data['message'] : 'PayPal payment creation failed';
+            kilismile_payment_debug('paypal_create_error', ['code' => $response_code, 'error' => $error_message, 'body' => $data], 'error');
+            throw new Exception($error_message);
+        }
+        
+        // Extract approval URL
+        if (isset($data['links'])) {
+            foreach ($data['links'] as $link) {
+                if ($link['rel'] === 'approval_url') {
+                    kilismile_payment_debug('paypal_create_success', ['approval_url' => $link['href'], 'id' => $data['id'] ?? null]);
+                    return $link['href'];
+                }
+            }
+        }
+        
+        throw new Exception('PayPal approval URL not found');
+    }
+
+    /**
+     * Get PayPal access token
+     */
+    private function get_access_token() {
+        $url = $this->api_base . '/v1/oauth2/token';
+        
+        $headers = array(
+            'Accept' => 'application/json',
+            'Accept-Language' => 'en_US',
+            'Authorization' => 'Basic ' . base64_encode($this->client_id . ':' . $this->client_secret)
+        );
+        
+        $body = array(
+            'grant_type' => 'client_credentials'
+        );
+        
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => $body,
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        return isset($data['access_token']) ? $data['access_token'] : false;
+    }
+
+    /**
+     * Handle PayPal return
+     */
+    public function handle_paypal_return() {
+        if (isset($_GET['paypal_return']) && isset($_GET['transaction_ref'])) {
+            $transaction_ref = sanitize_text_field($_GET['transaction_ref']);
+            $payment_id = sanitize_text_field($_GET['paymentId']);
+            $payer_id = sanitize_text_field($_GET['PayerID']);
+            
+            if ($payment_id && $payer_id) {
+                try {
+                    $this->execute_payment($payment_id, $payer_id, $transaction_ref);
+                    $this->update_transaction_status($transaction_ref, 'completed');
+                    
+                        // Redirect to unified success page with context
+                        $success_url = add_query_arg(array(
+                            'payment_success' => '1',
+                            'transaction_ref' => $transaction_ref,
+                            'gateway' => 'paypal'
+                        ), home_url('/donation-success'));
+                        wp_redirect($success_url);
+                    exit;
+                } catch (Exception $e) {
+                    $this->update_transaction_status($transaction_ref, 'failed');
+                        $error_url = add_query_arg(array(
+                            'payment_error' => urlencode($e->getMessage()),
+                            'transaction_ref' => $transaction_ref,
+                            'gateway' => 'paypal'
+                        ), home_url('/donate'));
+                        wp_redirect($error_url);
+                    exit;
+                }
+            }
+        } elseif (isset($_GET['paypal_cancel']) && isset($_GET['transaction_ref'])) {
+            $transaction_ref = sanitize_text_field($_GET['transaction_ref']);
+            $this->update_transaction_status($transaction_ref, 'cancelled');
+                $cancel_url = add_query_arg(array(
+                    'payment_cancelled' => '1',
+                    'transaction_ref' => $transaction_ref,
+                    'gateway' => 'paypal'
+                ), home_url('/donate'));
+                wp_redirect($cancel_url);
+            exit;
+        }
+    }
+
+    /**
+     * Execute PayPal payment
+     */
+    private function execute_payment($payment_id, $payer_id, $transaction_ref) {
+        $access_token = $this->get_access_token();
+        
+        if (!$access_token) {
+            throw new Exception('Failed to get PayPal access token');
+        }
+        
+        $url = $this->api_base . '/v1/payments/payment/' . $payment_id . '/execute';
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $access_token
+        );
+        
+        $body = array(
+            'payer_id' => $payer_id
+        );
+        
+        kilismile_payment_debug('paypal_execute_start', ['payment_id' => $payment_id, 'transaction_ref' => $transaction_ref]);
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => json_encode($body),
+            'timeout' => 30,
+            'sslverify' => !$this->sandbox_mode
+        ));
+        
+        if (is_wp_error($response)) {
+            kilismile_payment_debug('paypal_execute_network_error', $response->get_error_message(), 'error');
+            throw new Exception('Network error: ' . $response->get_error_message());
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+        if ($response_code !== 200 || (isset($data['state']) && $data['state'] !== 'approved')) {
+            $error_message = isset($data['message']) ? $data['message'] : 'PayPal payment execution failed';
+            kilismile_payment_debug('paypal_execute_error', ['code' => $response_code, 'error' => $error_message, 'body' => $data], 'error');
+            throw new Exception($error_message);
+        }
+        kilismile_payment_debug('paypal_execute_success', ['payment_id' => $payment_id, 'state' => $data['state'] ?? null]);
+        
+        return $data;
+    }
+
+    /**
+     * Store transaction in database
+     */
+    private function store_transaction($transaction_ref, $data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'kilismile_donations';
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'transaction_id' => $transaction_ref,
+                'donor_name' => $data['donor_name'],
+                'donor_email' => $data['donor_email'],
+                'donor_phone' => '',
+                'amount' => $data['amount'],
+                'currency' => $data['currency'],
+                'payment_method' => 'paypal',
+                'status' => $data['status'],
+                'donation_date' => current_time('mysql'),
+                'gateway_response' => maybe_serialize(array('gateway' => 'paypal'))
+            ),
+            array('%s', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s', '%s')
+        );
+    }
+
+    /**
+     * Update transaction status
+     */
+    private function update_transaction_status($transaction_ref, $status) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'kilismile_donations';
+        
+        $wpdb->update(
+            $table_name,
+            array('status' => $status),
+            array('transaction_id' => $transaction_ref),
+            array('%s'),
+            array('%s')
+        );
+    }
+    
+    /**
+     * Check payment status
+     */
+    public function check_payment_status($payment_id) {
+        try {
+            $access_token = $this->get_access_token();
+            
+            kilismile_payment_debug('paypal_status_check_start', ['payment_id' => $payment_id]);
+            $response = wp_remote_get($this->api_base . "/v1/payments/payment/{$payment_id}", array(
+                'headers' => array(
+                    'Authorization' => 'Bearer ' . $access_token,
+                    'Content-Type' => 'application/json'
+                )
+            ));
+            
+            if (is_wp_error($response)) {
+                kilismile_payment_debug('paypal_status_network_error', $response->get_error_message(), 'error');
+                throw new Exception('PayPal API request failed: ' . $response->get_error_message());
+            }
+            
+            $body = wp_remote_retrieve_body($response);
+            $payment_data = json_decode($body, true);
+            
+            if (!$payment_data || !isset($payment_data['state'])) {
+                kilismile_payment_debug('paypal_status_invalid_response', $payment_data, 'error');
+                throw new Exception('Invalid PayPal payment status response');
+            }
+            
+            $status_map = array(
+                'created' => 'pending',
+                'approved' => 'completed',
+                'failed' => 'failed',
+                'cancelled' => 'cancelled'
+            );
+            
+            $status = $status_map[$payment_data['state']] ?? 'pending';
+            
+            kilismile_payment_debug('paypal_status_result', ['payment_id' => $payment_id, 'state' => $payment_data['state'], 'mapped' => $status]);
+            return array(
+                'status' => $status,
+                'message' => 'Payment status: ' . ucfirst($status)
+            );
+            
+        } catch (Exception $e) {
+            kilismile_payment_debug('paypal_status_exception', ['payment_id' => $payment_id, 'error' => $e->get_message()], 'error');
+            return array(
+                'status' => 'error',
+                'message' => 'Failed to check payment status: ' . $e->getMessage()
+            );
+        }
+    }
+}
+
+// PayPal integration will be instantiated by the payment processor

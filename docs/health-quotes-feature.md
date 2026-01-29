@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the implementation of the Health Quotes feature that replaced the previous Testimonials section on the Kili Smile website. The Health Quotes section displays inspirational health-related quotes with a focus on oral health education and community wellness.
+This document explains the implementation of the Health Quotes feature that replaced the previous Testimonials section on the Kilismile website. The Health Quotes section displays inspirational health-related quotes with a focus on oral health education and community wellness.
 
 ## Key Features
 
@@ -72,3 +72,5 @@ If additional quotes are needed, the template can be expanded by:
 ## Technical Implementation
 
 The Health Quotes section uses static quotes rather than a custom post type (unlike the previous Testimonials section). This approach provides easier management through the Customizer interface without requiring content editors to create separate posts.
+
+

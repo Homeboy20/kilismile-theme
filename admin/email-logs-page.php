@@ -598,3 +598,5 @@ add_action('wp_ajax_get_email_log_details', function() {
     wp_send_json_success($content);
 });
 ?>
+
+

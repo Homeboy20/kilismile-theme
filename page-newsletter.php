@@ -2,7 +2,7 @@
 /**
  * Template Name: Newsletter Page
  * 
- * Newsletter subscription and archive page for Kili Smile Organization
+ * Newsletter subscription and archive page for Kilismile Organization
  *
  * @package KiliSmile
  */
@@ -297,7 +297,7 @@ get_header(); ?>
                                                 Privacy & Consent
                                             </div>
                                             <div class="consent-text">
-                                                I agree to receive newsletters and communications from Kili Smile Organization. 
+                                                I agree to receive newsletters and communications from Kilismile Organization. 
                                                 Your data is secure and you can unsubscribe at any time. 
                                                 <a href="<?php echo home_url('/privacy-policy'); ?>" target="_blank">Read our Privacy Policy</a>
                                             </div>
@@ -538,7 +538,7 @@ get_header(); ?>
                             <i class="fas fa-envelope"></i>
                             Subscribe Now
                         </a>
-                        <a href="<?php echo home_url('/donate'); ?>" class="btn btn-outline">
+                        <a href="<?php echo esc_url(function_exists('kilismile_get_donation_page_url_legacy') ? kilismile_get_donation_page_url_legacy() : home_url('/donation/')); ?>" class="btn btn-outline">
                             <i class="fas fa-heart"></i>
                             Make a Donation
                         </a>
@@ -551,3 +551,5 @@ get_header(); ?>
 </main>
 
 <?php get_footer(); ?>
+
+

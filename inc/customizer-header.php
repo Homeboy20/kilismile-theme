@@ -445,3 +445,5 @@ function kilismile_sanitize_select($input, $setting) {
 function kilismile_sanitize_float($input) {
     return floatval($input);
 }
+
+

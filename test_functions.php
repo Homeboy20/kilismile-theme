@@ -41,3 +41,5 @@ echo "Loading contact-functions.php...\n";
 include 'inc/contact-functions.php';
 
 echo "\nAll files loaded successfully! No function conflicts detected.\n";
+
+

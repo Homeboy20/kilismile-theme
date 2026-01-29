@@ -158,7 +158,7 @@ get_header(); ?>
                 <div class="contact-methods" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
                     <?php 
                     $email = get_theme_mod('kilismile_email', 'kilismile21@gmail.com');
-                    $phone = get_theme_mod('kilismile_phone', '0763495575/0735495575');
+                    $phone = get_theme_mod('kilismile_phone', '+255763495575/+255735495575');
                     ?>
                     
                     <a href="mailto:<?php echo esc_attr($email); ?>" 
@@ -205,3 +205,5 @@ get_header(); ?>
 </style>
 
 <?php get_footer(); ?>
+
+

@@ -1,6 +1,6 @@
 <?php
 /**
- * Fix Newsletter Page for Kili Smile
+ * Fix Newsletter Page for Kilismile
  * 
  * This script creates the newsletter page if it doesn't exist
  */
@@ -46,3 +46,5 @@ if (!$newsletter_page) {
         echo "Page template is already set correctly\n";
     }
 }
+
+

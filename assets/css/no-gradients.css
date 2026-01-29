@@ -1,0 +1,38 @@
+/* Remove gradient backgrounds site-wide */
+[style*="linear-gradient"],
+[style*="radial-gradient"],
+.has-background-gradient,
+.is-style-gradient,
+.gradient,
+.bg-gradient,
+.hero-gradient,
+.section-gradient,
+.card-gradient {
+  background-image: none !important;
+}
+
+[style*="linear-gradient"],
+[style*="radial-gradient"] {
+  background-image: none !important;
+}
+
+[style*="linear-gradient"]::before,
+[style*="linear-gradient"]::after,
+[style*="radial-gradient"]::before,
+[style*="radial-gradient"]::after,
+.has-background-gradient::before,
+.has-background-gradient::after,
+.is-style-gradient::before,
+.is-style-gradient::after,
+.gradient::before,
+.gradient::after,
+.bg-gradient::before,
+.bg-gradient::after,
+.hero-gradient::before,
+.hero-gradient::after,
+.section-gradient::before,
+.section-gradient::after,
+.card-gradient::before,
+.card-gradient::after {
+  background-image: none !important;
+}

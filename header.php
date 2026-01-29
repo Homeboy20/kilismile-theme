@@ -8,7 +8,7 @@
     <!-- SEO Meta Tags -->
     <meta name="description" content="<?php echo esc_attr(get_bloginfo('description')); ?>">
     <meta name="keywords" content="oral health, Tanzania, NGO, health education, Kilimanjaro, Moshi, children health, elderly care">
-    <meta name="author" content="Kili Smile Organization">
+    <meta name="author" content="Kilismile Organization">
     
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="<?php wp_title('|', true, 'right'); ?>">
@@ -213,8 +213,9 @@
                         $custom_logo_id = get_theme_mod('custom_logo');
                         $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
                         if ($logo) {
+                            $logo_url = set_url_scheme($logo[0], is_ssl() ? 'https' : 'http');
                             echo '<a href="' . esc_url(home_url('/')) . '" class="site-logo" rel="home">';
-                            echo '<img id="siteLogo" src="' . esc_url($logo[0]) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="custom-logo">';
+                            echo '<img id="siteLogo" src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="custom-logo">';
                             echo '</a>';
                         }
                         ?>
@@ -304,6 +305,20 @@
                             </ul>
                         </li>
 
+                        <!-- Partners Menu -->
+                        <li class="menu-item has-dropdown">
+                            <a href="<?php echo esc_url(home_url('/partners')); ?>" class="menu-link">
+                                <?php _e('Partners', 'kilismile'); ?>
+                                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="<?php echo esc_url(home_url('/partners')); ?>"><?php _e('All Partners', 'kilismile'); ?></a></li>
+                                <li><a href="<?php echo esc_url(home_url('/corporate')); ?>"><?php _e('Corporate Partnerships', 'kilismile'); ?></a></li>
+                                <li><a href="<?php echo esc_url(home_url('/partnerships')); ?>"><?php _e('Community Partners', 'kilismile'); ?></a></li>
+                                <li><a href="<?php echo esc_url(home_url('/corporate-sponsors')); ?>"><?php _e('Strategic Partners', 'kilismile'); ?></a></li>
+                            </ul>
+                        </li>
+
                         <!-- Get Involved Dropdown -->
                         <li class="menu-item has-dropdown">
                             <a href="<?php echo esc_url(home_url('/volunteer')); ?>" class="menu-link">
@@ -312,10 +327,9 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="<?php echo esc_url(home_url('/volunteer')); ?>"><?php _e('Volunteer', 'kilismile'); ?></a></li>
-                                <li><a href="<?php echo esc_url(home_url('/donations')); ?>"><?php _e('Donate', 'kilismile'); ?></a></li>
+                                <li><a href="<?php echo esc_url(function_exists('kilismile_get_donation_page_url_legacy') ? kilismile_get_donation_page_url_legacy() : home_url('/donation/')); ?>"><?php _e('Donate', 'kilismile'); ?></a></li>
                                 <li><a href="<?php echo esc_url(home_url('/fundraising')); ?>"><?php _e('Fundraising', 'kilismile'); ?></a></li>
-                                <li><a href="<?php echo esc_url(home_url('/partnerships')); ?>"><?php _e('Partnerships', 'kilismile'); ?></a></li>
-                                <li><a href="<?php echo esc_url(home_url('/corporate-sponsors')); ?>"><?php _e('Corporate Sponsors', 'kilismile'); ?></a></li>
+                                <li><a href="<?php echo esc_url(home_url('/become-partner')); ?>"><?php _e('Become a Partner', 'kilismile'); ?></a></li>
                             </ul>
                         </li>
 
@@ -359,7 +373,18 @@
                     
                     <!-- CTA Button -->
                     <?php if (get_theme_mod('kilismile_show_cta_button', true)) : ?>
-                        <a href="<?php echo esc_url(get_theme_mod('kilismile_cta_url', home_url('/donations'))); ?>" 
+                        <?php
+                        $kilismile_cta_default_url = function_exists('kilismile_get_donation_page_url_legacy')
+                            ? kilismile_get_donation_page_url_legacy()
+                            : home_url('/donation/');
+
+                        $kilismile_cta_url = get_theme_mod('kilismile_cta_url', $kilismile_cta_default_url);
+
+                        if (is_string($kilismile_cta_url) && preg_match('~/(donate|donations)/?$~i', $kilismile_cta_url)) {
+                            $kilismile_cta_url = $kilismile_cta_default_url;
+                        }
+                        ?>
+                        <a href="<?php echo esc_url($kilismile_cta_url); ?>" 
                            class="donate-btn" 
                            aria-label="<?php _e('Make a donation', 'kilismile'); ?>">
                             <i class="fas fa-heart" aria-hidden="true"></i>
@@ -437,3 +462,5 @@ function kilismile_fallback_menu() {
     echo '</ul>';
 }
 ?>
+
+

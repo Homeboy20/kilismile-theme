@@ -1,0 +1,462 @@
+<?php
+/**
+ * Unified Payment Processor
+ * Handles both PayPal and AzamPay payments through a single interface
+ * Supports both standard and enhanced AzamPay integration
+ */
+
+if (!defined('ABSPATH')) exit;
+
+class KiliSmile_Payment_Processor {
+    
+    private $paypal_integration;
+    private $azampay_integration;
+    private $database;
+    private $use_enhanced_azampay;
+    
+    public function __construct() {
+        // Check if enhanced AzamPay is enabled
+        $this->use_enhanced_azampay = get_option('kilismile_use_enhanced_azampay', false);
+        
+        // Initialize integrations (lazy loading)
+        $this->database = new KiliSmile_Donation_Database();
+        
+        // Register unified AJAX handlers
+        add_action('wp_ajax_kilismile_process_payment', array($this, 'ajax_process_payment'));
+        add_action('wp_ajax_nopriv_kilismile_process_payment', array($this, 'ajax_process_payment'));
+        add_action('wp_ajax_kilismile_check_payment_status', array($this, 'ajax_check_payment_status'));
+        add_action('wp_ajax_nopriv_kilismile_check_payment_status', array($this, 'ajax_check_payment_status'));
+        
+        // Register AzamPay callback handler for both standard and enhanced integrations
+        add_action('wp_ajax_azampay_callback', array($this, 'handle_azampay_callback'));
+        add_action('wp_ajax_nopriv_azampay_callback', array($this, 'handle_azampay_callback'));
+    }
+    
+    /**
+     * Get PayPal integration instance (lazy loading)
+     */
+    private function get_paypal_integration() {
+        if (!$this->paypal_integration) {
+            $this->paypal_integration = new KiliSmile_PayPal();
+        }
+        return $this->paypal_integration;
+    }
+    
+    /**
+     * Get AzamPay integration instance (lazy loading)
+     */
+    private function get_azampay_integration() {
+        if (!$this->azampay_integration) {
+            if ($this->use_enhanced_azampay) {
+                $this->azampay_integration = new KiliSmile_Enhanced_AzamPay();
+                kilismile_payment_debug('azampay_integration_selected', ['type' => 'enhanced']);
+            } else {
+                $this->azampay_integration = new KiliSmile_AzamPay();
+                kilismile_payment_debug('azampay_integration_selected', ['type' => 'standard']);
+            }
+        }
+        return $this->azampay_integration;
+    }
+    
+    /**
+     * AJAX handler for processing payments
+     */
+    public function ajax_process_payment() {
+    kilismile_payment_debug('request_received', ['post' => $_POST]);
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'kilismile_payment_nonce')) {
+            kilismile_payment_debug('nonce_failure', [], 'error');
+            wp_send_json_error(array(
+                'message' => 'Security verification failed'
+            ));
+        }
+        
+        // Validate and sanitize input
+        $payment_data = $this->validate_payment_data($_POST);
+        if (!$payment_data) {
+            kilismile_payment_debug('validation_failed', ['raw' => $_POST], 'error');
+            wp_send_json_error(array(
+                'message' => 'Invalid payment data. Please check all required fields.'
+            ));
+        }
+        
+        kilismile_payment_debug('validated', $payment_data);
+        
+        // Determine payment gateway based on currency or explicit gateway setting
+        $gateway = $payment_data['payment_gateway'] ?: $this->determine_gateway($payment_data['currency']);
+        
+        try {
+            // Create payment record
+            $donation_id = $this->create_payment_record($payment_data, $gateway);
+            
+            // Process payment based on gateway
+            if ($gateway === 'paypal') {
+                $result = $this->process_paypal_payment($payment_data, $donation_id);
+            } else if ($gateway === 'azampay') {
+                $result = $this->process_azampay_payment($payment_data, $donation_id);
+            } else {
+                throw new Exception('Unsupported payment gateway: ' . $gateway);
+            }
+            
+            // Update payment record with gateway response
+            $this->update_payment_record($donation_id, $result);
+            
+            wp_send_json_success($result);
+            
+        } catch (Exception $e) {
+            kilismile_payment_debug('processing_exception', ['error' => $e->getMessage()], 'error');
+            wp_send_json_error(array(
+                'message' => 'Payment processing failed: ' . $e->getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * AJAX handler for checking payment status
+     */
+    public function ajax_check_payment_status() {
+        if (!wp_verify_nonce($_POST['nonce'], 'kilismile_payment_nonce')) {
+            wp_send_json_error(array(
+                'message' => 'Security verification failed'
+            ));
+        }
+        
+        $donation_id = sanitize_text_field($_POST['donation_id']);
+        $payment = $this->database->get_donation($donation_id); // Returns associative array
+        
+        if (!$payment || !is_array($payment)) {
+            wp_send_json_error(array(
+                'message' => 'Payment not found'
+            ));
+        }
+        
+        try {
+            // Check status with appropriate gateway
+            $payment_method = $payment['payment_method'] ?? '';
+            // External reference used when initiating payments is the donation_id itself
+            $external_ref = $payment['donation_id'];
+            kilismile_payment_debug('status_check_start', ['donation_id' => $donation_id, 'method' => $payment_method]);
+
+            if ($payment_method === 'azampay') {
+                $status_result = $this->get_azampay_integration()->check_payment_status($external_ref);
+            } else if ($payment_method === 'paypal') {
+                // Pass gateway transaction id if we have it, otherwise the donation id
+                $pp_ref = $payment['gateway_transaction_id'] ?: $external_ref;
+                $status_result = $this->get_paypal_integration()->check_payment_status($pp_ref);
+            } else {
+                throw new Exception('Unsupported gateway for status check');
+            }
+            
+            // Update payment status if changed
+            if (!empty($status_result['status']) && $status_result['status'] !== ($payment['status'] ?? '')) {
+                $this->database->update_donation_status($donation_id, $status_result['status'], $payment['gateway_transaction_id'] ?? null);
+                kilismile_payment_debug('status_updated', ['donation_id' => $donation_id, 'new_status' => $status_result['status']]);
+            } else {
+                kilismile_payment_debug('status_no_change', ['donation_id' => $donation_id, 'status' => $payment['status'] ?? '']);
+            }
+            
+            wp_send_json_success(array(
+                'status' => $status_result['status'],
+                'message' => $status_result['message']
+            ));
+            
+        } catch (Exception $e) {
+            kilismile_payment_debug('status_check_error', ['donation_id' => $donation_id, 'error' => $e->getMessage()], 'error');
+            wp_send_json_error(array(
+                'message' => 'Status check failed: ' . $e->getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * Validate payment data
+     */
+    private function validate_payment_data($data) {
+        $required_fields = array('currency', 'amount', 'donor_name', 'donor_email');
+        
+        foreach ($required_fields as $field) {
+            if (empty($data[$field])) {
+                return false;
+            }
+        }
+        
+        // Validate amount
+        $amount = floatval($data['amount']);
+        if ($amount <= 0) {
+            return false;
+        }
+        
+        // Validate currency
+        if (!in_array($data['currency'], array('USD', 'TZS'))) {
+            return false;
+        }
+        
+        // Validate email
+        if (!is_email($data['donor_email'])) {
+            return false;
+        }
+        
+        // For TZS payments using STK Push, validate phone and network
+        if ($data['currency'] === 'TZS' && !empty($data['payment_phone'])) {
+            if (empty($data['mobile_network'])) {
+                return false;
+            }
+        }
+        
+        return array(
+            'currency' => sanitize_text_field($data['currency']),
+            'amount' => $amount,
+            'donor_name' => sanitize_text_field($data['donor_name']),
+            'donor_email' => sanitize_email($data['donor_email']),
+            'donor_phone' => sanitize_text_field($data['donor_phone'] ?? $data['payment_phone'] ?? ''),
+            'mobile_network' => sanitize_text_field($data['mobile_network'] ?? ''),
+            'anonymous' => !empty($data['anonymous']) ? 1 : 0,
+            'payment_gateway' => sanitize_text_field($data['payment_gateway'] ?? ''),
+            'use_checkout' => !empty($data['use_checkout']),
+            'recurring' => !empty($data['recurring'])
+        );
+    }
+    
+    /**
+     * Determine payment gateway based on currency
+     */
+    private function determine_gateway($currency) {
+        if ($currency === 'USD') {
+            return 'paypal';
+        } else if ($currency === 'TZS') {
+            return 'azampay';
+        }
+        return null;
+    }
+    
+    /**
+     * Create payment record in database
+     */
+    private function create_payment_record($payment_data, $gateway) {
+        $donation_id = 'KS_' . time() . '_' . wp_rand(1000, 9999);
+        
+        // Parse donor name into first and last name
+        $name_parts = explode(' ', trim($payment_data['donor_name']), 2);
+        $first_name = $name_parts[0] ?? '';
+        $last_name = $name_parts[1] ?? '';
+        
+        $record = array(
+            'donation_id' => $donation_id,
+            'amount' => $payment_data['amount'],
+            'currency' => $payment_data['currency'],
+            'payment_method' => $gateway,
+            'recurring' => $payment_data['recurring'] ?? false,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'email' => $payment_data['donor_email'],
+            'phone' => $payment_data['donor_phone'],
+            'anonymous' => $payment_data['anonymous'] ?? false,
+            'purpose' => $payment_data['purpose'] ?? 'general',
+            'message' => $payment_data['message'] ?? '',
+            'country' => $payment_data['country'] ?? '',
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+        );
+        
+        // Add mobile network for AzamPay
+        if ($gateway === 'azampay' && !empty($payment_data['mobile_network'])) {
+            $this->database->add_donation_meta($donation_id, 'mobile_network', $payment_data['mobile_network']);
+        }
+        
+        $result = $this->database->create_donation($record);
+        if (!$result) {
+            throw new Exception('Failed to create payment record');
+        }
+        
+        return $donation_id;
+    }
+    
+    /**
+     * Process PayPal payment
+     */
+    private function process_paypal_payment($payment_data, $donation_id) {
+        // Create PayPal payment
+        $paypal_result = $this->get_paypal_integration()->create_payment(array(
+            'amount' => $payment_data['amount'],
+            'currency' => $payment_data['currency'],
+            'description' => 'Donation to KiliSmile Organization',
+            'donation_id' => $donation_id,
+            'return_url' => home_url('/donation-success/'),
+            'cancel_url' => home_url('/donation-cancelled/')
+        ));
+        
+        if (!$paypal_result['success']) {
+            throw new Exception($paypal_result['message']);
+        }
+        
+        return array(
+            'success' => true,
+            'payment_method' => 'paypal',
+            'redirect_url' => $paypal_result['approval_url'],
+            'payment_id' => $paypal_result['payment_id'],
+            'donation_id' => $donation_id
+        );
+    }
+    
+    /**
+     * Process AzamPay payment
+     */
+    private function process_azampay_payment($payment_data, $donation_id) {
+        // Check if user prefers checkout page or direct STK push
+        $use_checkout = $payment_data['use_checkout'];
+        
+        $azampay_data = array(
+            'amount' => $payment_data['amount'],
+            'currency' => $payment_data['currency'],
+            'reference' => $donation_id,
+            'donor_name' => $payment_data['donor_name'],
+            'donor_email' => $payment_data['donor_email'],
+            'donor_phone' => $payment_data['donor_phone'],
+            'network' => $payment_data['mobile_network']
+        );
+        
+        if ($use_checkout) {
+            // Use AzamPay Checkout (Hosted Payment Page)
+            try {
+                $azampay_result = $this->get_azampay_integration()->create_checkout_session($azampay_data);
+            } catch (Exception $e) {
+                // Attempt to extract structured validation errors from latest debug packet
+                $error_message = $e->getMessage();
+                if ($this->use_enhanced_azampay && method_exists($this->get_azampay_integration(), 'get_checkout_debug')) {
+                    $debug = $this->get_azampay_integration()->get_checkout_debug($donation_id);
+                    if (is_array($debug) && !empty($debug['response_body'])) {
+                        $decoded = json_decode($debug['response_body'], true);
+                        if (is_array($decoded)) {
+                            // Collect validation details
+                            $details = [];
+                            if (!empty($decoded['errors']) && is_array($decoded['errors'])) {
+                                foreach ($decoded['errors'] as $ek => $ev) {
+                                    if (is_string($ev)) { $details[] = $ek . ': ' . $ev; }
+                                    elseif (is_array($ev)) { $details[] = $ek . ': ' . implode(', ', array_map(function($k,$v){return $k.'='.$v;}, array_keys($ev), $ev)); }
+                                }
+                            }
+                            if (!$details && !empty($decoded['data']) && is_array($decoded['data']) && !empty($decoded['data']['errors'])) {
+                                foreach ($decoded['data']['errors'] as $ek => $ev) {
+                                    if (is_string($ev)) { $details[] = $ek . ': ' . $ev; }
+                                }
+                            }
+                            if ($details) {
+                                $error_message .= ' | ' . implode(' | ', $details);
+                            }
+                        }
+                    }
+                }
+                throw new Exception($error_message);
+            }
+
+            if (empty($azampay_result['success'])) {
+                throw new Exception($azampay_result['message'] ?? 'Checkout session creation failed');
+            }
+
+            return array(
+                'success' => true,
+                'payment_method' => 'azampay_checkout',
+                'redirect_url' => $azampay_result['checkout_url'],
+                'checkout_id' => $azampay_result['checkout_id'],
+                'donation_id' => $donation_id,
+                'status' => 'pending',
+                'message' => 'Redirecting to AzamPay checkout page...'
+            );
+        } else {
+            // Use STK Push (Direct Mobile Payment)
+            $azampay_result = $this->get_azampay_integration()->initiate_stkpush($azampay_data);
+            
+            if (!$azampay_result['success']) {
+                throw new Exception($azampay_result['message'] ?? 'STK push failed');
+            }
+            
+            return array(
+                'success' => true,
+                'payment_method' => 'azampay_stkpush',
+                'transaction_id' => $azampay_result['transaction_id'],
+                'donation_id' => $donation_id,
+                'status' => 'pending',
+                'message' => 'STK push sent to your phone. Please complete the payment.'
+            );
+        }
+    }
+    
+    /**
+     * Update payment record with gateway response
+     */
+    private function update_payment_record($donation_id, $result) {
+        $updates = array(
+            'updated_at' => current_time('mysql')
+        );
+        
+        // Map gateway references to schema field gateway_transaction_id
+        if (!empty($result['payment_id'])) {
+            $updates['gateway_transaction_id'] = $result['payment_id'];
+        } elseif (!empty($result['transaction_id'])) {
+            $updates['gateway_transaction_id'] = $result['transaction_id'];
+        } elseif (!empty($result['checkout_id'])) {
+            // For checkout we may only have a checkout id initially
+            $updates['gateway_transaction_id'] = $result['checkout_id'];
+        }
+        
+        if (isset($result['status'])) {
+            $updates['status'] = $result['status']; // Column name is 'status'
+        }
+        
+        $this->database->update_donation($donation_id, $updates);
+    }
+    
+    /**
+     * Handle AzamPay payment callbacks
+     */
+    public function handle_azampay_callback() {
+        try {
+            $this->get_azampay_integration()->handle_checkout_callback();
+        } catch (Exception $e) {
+            error_log('AzamPay Callback Error: ' . $e->getMessage());
+            http_response_code(500);
+            exit('Callback processing failed');
+        }
+    }
+
+    /**
+     * Diagnostic endpoint to inspect a donation record & logs quickly.
+     * action: kilismile_debug_donation (requires manage_options cap & nonce)
+     */
+    public function ajax_debug_donation() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized']);
+        }
+        $nonce = $_POST['nonce'] ?? '';
+        if (!wp_verify_nonce($nonce, 'kilismile_payment_nonce')) {
+            wp_send_json_error(['message' => 'Bad nonce']);
+        }
+        $donation_id = sanitize_text_field($_POST['donation_id'] ?? '');
+        if (!$donation_id) {
+            wp_send_json_error(['message' => 'Missing donation_id']);
+        }
+        $record = $this->database->get_donation($donation_id);
+        if (!$record) {
+            wp_send_json_error(['message' => 'Donation not found']);
+        }
+        $logs = $this->database->get_donation_logs($donation_id, 20);
+        wp_send_json_success([
+            'record' => $record,
+            'logs' => $logs,
+            'enhanced_azampay' => (bool)$this->use_enhanced_azampay
+        ]);
+    }
+}
+
+// Initialize the payment processor after all plugins and theme are loaded
+if (function_exists('add_action')) {
+    add_action('init', function() {
+        new KiliSmile_Payment_Processor();
+    });
+    // Register debug endpoint
+    add_action('wp_ajax_kilismile_debug_donation', function() {
+        $processor = new KiliSmile_Payment_Processor();
+        $processor->ajax_debug_donation();
+    });
+}

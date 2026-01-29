@@ -17,7 +17,7 @@ $smtp_password = get_option('kilismile_smtp_password', '');
 $smtp_encryption = get_option('kilismile_smtp_encryption', 'tls');
 $smtp_auth = get_option('kilismile_smtp_auth', true);
 $from_email = get_option('kilismile_from_email', get_theme_mod('kilismile_email', 'kilismile21@gmail.com'));
-$from_name = get_option('kilismile_from_name', 'Kili Smile Organization');
+$from_name = get_option('kilismile_from_name', 'Kilismile Organization');
 $log_emails = get_option('kilismile_log_emails', true);
 $tax_deduction_info = get_option('kilismile_tax_deduction_info', '');
 ?>
@@ -492,3 +492,5 @@ jQuery(document).ready(function($) {
     });
 });
 </script>
+
+

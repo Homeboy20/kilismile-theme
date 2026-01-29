@@ -1,5 +1,5 @@
 /**
- * Kili Smile Organization Theme JavaScript
+ * Kilismile Organization Theme JavaScript
  * 
  * @package KiliSmile
  * @version 1.0.0
@@ -453,17 +453,26 @@
      * Preload Critical Resources
      */
     function preloadCriticalResources() {
+        // Only preload images that actually exist
         const criticalImages = [
-            '/wp-content/themes/kilismile/assets/images/logo.png',
-            '/wp-content/themes/kilismile/assets/images/hero-bg.jpg'
+            '/wp-content/themes/kilismile/assets/images/logo.svg',
+            '/wp-content/themes/kilismile/assets/images/hero-background.svg'
         ];
         
         criticalImages.forEach(function(src) {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'image';
-            link.href = src;
-            document.head.appendChild(link);
+            // Test if image exists before preloading
+            const img = new Image();
+            img.onload = function() {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = src;
+                document.head.appendChild(link);
+            };
+            img.onerror = function() {
+                console.log('Image not found, skipping preload:', src);
+            };
+            img.src = src;
         });
     }
 
@@ -620,7 +629,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Service Worker Registration for PWA capabilities
+    // Service Worker Registration disabled for now
+    // TODO: Create sw.js file if PWA functionality is needed
+    /*
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('/sw.js')
@@ -632,5 +643,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+    */
     
 });
+
+

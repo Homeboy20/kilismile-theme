@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tab Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .nav-tab-wrapper {
+            margin-bottom: 20px;
+        }
+        
+        .nav-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: #f1f1f1;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab:hover {
+            background: #f0f0f1;
+        }
+        
+        .nav-tab.nav-tab-active {
+            background: #2271b1 !important;
+            color: white !important;
+        }
+        
+        .tab-content {
+            display: none !important;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background: white;
+        }
+        
+        .tab-content.active {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tab System Test</h1>
+    
+    <div class="nav-tab-wrapper">
+        <a href="#donation-settings" class="nav-tab nav-tab-active" data-tab="donation-settings">
+            Donation Settings
+        </a>
+        <a href="#payment-methods" class="nav-tab" data-tab="payment-methods">
+            Payment Methods
+        </a>
+        <a href="#gateway-integration" class="nav-tab" data-tab="gateway-integration">
+            Gateway Integration
+        </a>
+    </div>
+    
+    <div id="donation-settings" class="tab-content active">
+        <h2>Donation Settings</h2>
+        <p>This is the donation settings content.</p>
+    </div>
+    
+    <div id="payment-methods" class="tab-content">
+        <h2>Payment Methods</h2>
+        <p>This is the payment methods content.</p>
+    </div>
+    
+    <div id="gateway-integration" class="tab-content">
+        <h2>Gateway Integration</h2>
+        <p>This is the gateway integration content.</p>
+    </div>
+    
+    <script>
+        (function($) {
+            'use strict';
+            
+            $(document).ready(function() {
+                console.log('Test page loaded');
+                
+                // Tab switching
+                $('.nav-tab').off('click.test').on('click.test', function(e) {
+                    e.preventDefault();
+                    
+                    var $this = $(this);
+                    var targetTab = $this.attr('data-tab');
+                    
+                    console.log('Switching to tab:', targetTab);
+                    
+                    // Update tab states
+                    $('.nav-tab').removeClass('nav-tab-active');
+                    $this.addClass('nav-tab-active');
+                    
+                    // Update content
+                    $('.tab-content').removeClass('active').hide();
+                    var $targetContent = $('#' + targetTab);
+                    $targetContent.addClass('active').fadeIn(200);
+                    
+                    console.log('Tab switched successfully');
+                });
+                
+                console.log('Tab system initialized');
+            });
+            
+        })(jQuery);
+    </script>
+</body>
+</html>

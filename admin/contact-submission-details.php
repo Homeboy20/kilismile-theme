@@ -114,7 +114,7 @@ if (!defined('ABSPATH')) {
         </div>
         
         <div class="action-buttons">
-            <a href="mailto:<?php echo esc_attr($submission->email); ?>?subject=Re: <?php echo esc_attr($submission->subject); ?>&body=Hello <?php echo esc_attr($submission->name); ?>,%0D%0A%0D%0AThank you for contacting Kili Smile Organization.%0D%0A%0D%0A" 
+            <a href="mailto:<?php echo esc_attr($submission->email); ?>?subject=Re: <?php echo esc_attr($submission->subject); ?>&body=Hello <?php echo esc_attr($submission->name); ?>,%0D%0A%0D%0AThank you for contacting Kilismile Organization.%0D%0A%0D%0A" 
                class="button button-primary">
                 <i class="fas fa-reply"></i>
                 <?php _e('Reply via Email', 'kilismile'); ?>
@@ -149,7 +149,7 @@ if (!defined('ABSPATH')) {
                     <div class="form-group">
                         <label for="quick_message"><?php _e('Message:', 'kilismile'); ?></label>
                         <textarea id="quick_message" name="quick_message" rows="6" required
-                                  placeholder="Hello <?php echo esc_attr($submission->name); ?>,&#10;&#10;Thank you for contacting Kili Smile Organization..."></textarea>
+                                  placeholder="Hello <?php echo esc_attr($submission->name); ?>,&#10;&#10;Thank you for contacting Kilismile Organization..."></textarea>
                     </div>
                     
                     <div class="form-group">
@@ -614,7 +614,7 @@ function kilismile_ajax_send_quick_email_reply() {
         // Fallback to wp_mail
         $headers = array(
             'Content-Type: text/plain; charset=UTF-8',
-            'From: Kili Smile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
+            'From: Kilismile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
         );
         $email_sent = wp_mail($submission->email, $subject, $message, $headers);
     }
@@ -661,3 +661,5 @@ function kilismile_ajax_delete_contact_submission() {
 }
 
 ?>
+
+

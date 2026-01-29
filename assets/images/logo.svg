@@ -20,5 +20,7 @@
   <path d="M35,75 Q60,95 85,75" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
   
   <!-- Organization Text -->
-  <text x="60" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#2D5A41">KILI SMILE</text>
+  <text x="60" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#2D5A41">Kilismile</text>
 </svg>
+
+

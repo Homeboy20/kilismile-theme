@@ -48,7 +48,7 @@ function kilismile_customize_register_extended($wp_customize) {
     
     // Hero section description
     $wp_customize->add_setting('kilismile_hero_description', array(
-        'default'           => 'KILI SMILE ORGANIZATION is dedicated to improving health outcomes in underserved communities through comprehensive oral health education, teacher training, and disease screening programs.',
+        'default'           => 'Kilismile ORGANIZATION is dedicated to improving health outcomes in underserved communities through comprehensive oral health education, teacher training, and disease screening programs.',
         'sanitize_callback' => 'sanitize_textarea_field',
     ));
     
@@ -542,7 +542,7 @@ function kilismile_customize_register_extended($wp_customize) {
     ));
     
     $wp_customize->add_setting('kilismile_phone', array(
-        'default'           => '0763495575/0735495575',
+        'default'           => '+255763495575/+255735495575',
         'sanitize_callback' => 'sanitize_text_field',
     ));
     
@@ -933,3 +933,5 @@ function kilismile_sanitize_checkbox($checked) {
 }
 
 ?>
+
+

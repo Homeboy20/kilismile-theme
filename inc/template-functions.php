@@ -16,12 +16,12 @@ if (!defined('ABSPATH')) {
  */
 function kilismile_get_organization_info($field = '') {
     $info = array(
-        'name' => 'KILI SMILE ORGANIZATION',
+        'name' => 'Kilismile ORGANIZATION',
         'tagline' => get_theme_mod('kilismile_tagline', 'No health without oral health'),
         'registration' => get_theme_mod('kilismile_registration', '07NGO/R/6067'),
         'founded' => 'April 25, 2024',
         'registration_date' => 'April 25, 2024',
-        'phone' => get_theme_mod('kilismile_phone', '0763495575/0735495575'),
+        'phone' => get_theme_mod('kilismile_phone', '+255763495575/+255735495575'),
         'email' => get_theme_mod('kilismile_email', 'kilismile21@gmail.com'),
         'address' => get_theme_mod('kilismile_address', 'P.O. Box 928, Moshi, Kilimanjaro, Tanzania'),
         'instagram' => get_theme_mod('kilismile_instagram', 'https://instagram.com/kili_smile'),
@@ -422,22 +422,26 @@ add_filter('post_class', 'kilismile_post_classes', 10, 3);
 /**
  * Custom Body Class
  */
-function kilismile_body_classes($classes) {
-    // Add page slug class
-    if (is_page()) {
-        global $post;
-        $classes[] = 'page-' . $post->post_name;
+if (!function_exists('kilismile_body_classes')) {
+    function kilismile_body_classes($classes) {
+        // Add page slug class
+        if (is_page()) {
+            global $post;
+            $classes[] = 'page-' . $post->post_name;
+        }
+        
+        // Add template class
+        if (is_page_template()) {
+            $template = get_page_template_slug();
+            $template_name = str_replace(array('page-', '.php'), '', basename($template));
+            $classes[] = 'template-' . $template_name;
+        }
+        
+        return $classes;
     }
-    
-    // Add template class
-    if (is_page_template()) {
-        $template = get_page_template_slug();
-        $template_name = str_replace(array('page-', '.php'), '', basename($template));
-        $classes[] = 'template-' . $template_name;
-    }
-    
-    return $classes;
 }
 add_filter('body_class', 'kilismile_body_classes');
 
 ?>
+
+

@@ -1,0 +1,892 @@
+<?php
+/**
+ * KiliSmile Payment System
+ * Comprehensive donation and payment processing for the KiliSmile website
+ * Supports Selcom Payment, Azam Pay, and offline payment instructions
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Prevent class redeclaration
+if (class_exists('KiliSmile_Payment_System')) {
+    return;
+}
+
+/**
+ * Main Payment System Class
+ */
+class KiliSmile_Payment_System {
+    
+    private $selcom_public_key;
+    private $selcom_private_key;
+    private $azam_api_key;
+    private $azam_merchant_id;
+    private $sandbox_mode;
+    
+    public function __construct() {
+        // Initialize payment gateway credentials
+        $this->selcom_public_key = get_option('kilismile_selcom_public_key', '');
+        $this->selcom_private_key = get_option('kilismile_selcom_private_key', '');
+        $this->azam_api_key = get_option('kilismile_azam_api_key', '');
+        $this->azam_merchant_id = get_option('kilismile_azam_merchant_id', '');
+        $this->sandbox_mode = get_option('kilismile_payment_sandbox', true);
+        
+        // Hook into WordPress
+        add_action('init', array($this, 'init'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_payment_scripts'));
+        add_action('wp_ajax_kilismile_process_donation', array($this, 'handle_donation_ajax'));
+        add_action('wp_ajax_nopriv_kilismile_process_donation', array($this, 'handle_donation_ajax'));
+        add_action('wp_ajax_kilismile_verify_payment', array($this, 'handle_payment_verification'));
+        add_action('wp_ajax_nopriv_kilismile_verify_payment', array($this, 'handle_payment_verification'));
+        add_action('admin_menu', array($this, 'add_admin_menu'));
+        add_action('admin_init', array($this, 'admin_init'));
+    }
+    
+    /**
+     * Initialize the payment system
+     */
+    public function init() {
+        $this->create_payment_tables();
+        $this->setup_payment_endpoints();
+    }
+    
+    /**
+     * Create database tables for donations and transactions
+     */
+    public function create_payment_tables() {
+        global $wpdb;
+        
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        // Donations table
+        $donations_table = $wpdb->prefix . 'kilismile_donations';
+        $donations_sql = "CREATE TABLE $donations_table (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            donor_name varchar(255) NOT NULL,
+            donor_email varchar(255) NOT NULL,
+            donor_phone varchar(20) DEFAULT '',
+            amount decimal(10,2) NOT NULL,
+            currency varchar(5) DEFAULT 'TZS',
+            payment_method varchar(50) NOT NULL,
+            transaction_id varchar(255) DEFAULT '',
+            payment_status varchar(20) DEFAULT 'pending',
+            gateway_response longtext DEFAULT '',
+            donation_type varchar(50) DEFAULT 'general',
+            donation_message text DEFAULT '',
+            is_anonymous tinyint(1) DEFAULT 0,
+            is_recurring tinyint(1) DEFAULT 0,
+            recurring_frequency varchar(20) DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY payment_status (payment_status),
+            KEY donation_type (donation_type),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        // Payment transactions table
+        $transactions_table = $wpdb->prefix . 'kilismile_payment_transactions';
+        $transactions_sql = "CREATE TABLE $transactions_table (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            donation_id mediumint(9) NOT NULL,
+            transaction_reference varchar(255) NOT NULL,
+            gateway varchar(50) NOT NULL,
+            gateway_transaction_id varchar(255) DEFAULT '',
+            amount decimal(10,2) NOT NULL,
+            currency varchar(5) DEFAULT 'TZS',
+            status varchar(20) DEFAULT 'pending',
+            gateway_request longtext DEFAULT '',
+            gateway_response longtext DEFAULT '',
+            callback_data longtext DEFAULT '',
+            processed_at datetime DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY donation_id (donation_id),
+            KEY transaction_reference (transaction_reference),
+            KEY status (status),
+            FOREIGN KEY (donation_id) REFERENCES $donations_table(id) ON DELETE CASCADE
+        ) $charset_collate;";
+        
+        // Payment methods configuration table
+        $payment_methods_table = $wpdb->prefix . 'kilismile_payment_methods';
+        $payment_methods_sql = "CREATE TABLE $payment_methods_table (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            method_code varchar(50) NOT NULL,
+            method_name varchar(255) NOT NULL,
+            gateway varchar(50) NOT NULL,
+            is_active tinyint(1) DEFAULT 1,
+            configuration longtext DEFAULT '',
+            display_order int(5) DEFAULT 0,
+            minimum_amount decimal(10,2) DEFAULT 1000.00,
+            maximum_amount decimal(10,2) DEFAULT 10000000.00,
+            instructions text DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY method_code (method_code),
+            KEY is_active (is_active)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($donations_sql);
+        dbDelta($transactions_sql);
+        dbDelta($payment_methods_sql);
+        
+        // Insert default payment methods
+        $this->insert_default_payment_methods();
+    }
+    
+    /**
+     * Insert default payment methods
+     */
+    private function insert_default_payment_methods() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'kilismile_payment_methods';
+        
+        $default_methods = array(
+            array(
+                'method_code' => 'selcom_card',
+                'method_name' => 'Credit/Debit Card (Selcom)',
+                'gateway' => 'selcom',
+                'instructions' => 'Pay securely with your credit or debit card through Selcom Payment Gateway.',
+                'minimum_amount' => 1000,
+                'maximum_amount' => 5000000
+            ),
+            array(
+                'method_code' => 'selcom_mobile',
+                'method_name' => 'Mobile Money (Selcom)',
+                'gateway' => 'selcom',
+                'instructions' => 'Pay using M-Pesa, Tigo Pesa, or Airtel Money through Selcom.',
+                'minimum_amount' => 500,
+                'maximum_amount' => 2000000
+            ),
+            array(
+                'method_code' => 'azam_mobile',
+                'method_name' => 'Mobile Money (Azam Pay)',
+                'gateway' => 'azam',
+                'instructions' => 'Pay using M-Pesa, Tigo Pesa, Airtel Money, or Halotel through Azam Pay.',
+                'minimum_amount' => 500,
+                'maximum_amount' => 1500000
+            ),
+            array(
+                'method_code' => 'offline_mpesa',
+                'method_name' => 'M-Pesa (Manual)',
+                'gateway' => 'offline',
+                'instructions' => 'Send money to Paybill: 123456, Account: KILISMILE[Your Name]. SMS confirmation to +255 XXX XXX XXX',
+                'minimum_amount' => 100,
+                'maximum_amount' => 10000000
+            ),
+            array(
+                'method_code' => 'offline_tigopesa',
+                'method_name' => 'Tigo Pesa (Manual)',
+                'gateway' => 'offline',
+                'instructions' => 'Send money to: +255 XXX XXX XXX. Include "KILISMILE" in reference.',
+                'minimum_amount' => 100,
+                'maximum_amount' => 10000000
+            ),
+            array(
+                'method_code' => 'offline_bank',
+                'method_name' => 'Bank Transfer',
+                'gateway' => 'offline',
+                'instructions' => 'Bank: NMB Bank, Account: 12345678901, Name: Kilismile Organization. Send proof to info@kilismile.org',
+                'minimum_amount' => 1000,
+                'maximum_amount' => 50000000
+            )
+        );
+        
+        foreach ($default_methods as $method) {
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM $table WHERE method_code = %s",
+                $method['method_code']
+            ));
+            
+            if (!$existing) {
+                $wpdb->insert($table, $method);
+            }
+        }
+    }
+    
+    /**
+     * Setup payment endpoints
+     */
+    public function setup_payment_endpoints() {
+        // Add rewrite rules for payment callbacks
+        add_rewrite_rule('^payment/callback/selcom/?$', 'index.php?kilismile_payment_callback=selcom', 'top');
+        add_rewrite_rule('^payment/callback/azam/?$', 'index.php?kilismile_payment_callback=azam', 'top');
+        add_rewrite_rule('^payment/verify/([^/]+)/?$', 'index.php?kilismile_payment_verify=$matches[1]', 'top');
+        
+        // Handle callback queries
+        add_filter('query_vars', array($this, 'add_query_vars'));
+        add_action('template_redirect', array($this, 'handle_payment_callbacks'));
+    }
+    
+    /**
+     * Add custom query variables
+     */
+    public function add_query_vars($vars) {
+        $vars[] = 'kilismile_payment_callback';
+        $vars[] = 'kilismile_payment_verify';
+        return $vars;
+    }
+    
+    /**
+     * Handle payment gateway callbacks
+     */
+    public function handle_payment_callbacks() {
+        $callback = get_query_var('kilismile_payment_callback');
+        $verify = get_query_var('kilismile_payment_verify');
+        
+        if ($callback) {
+            $this->process_payment_callback($callback);
+        }
+        
+        if ($verify) {
+            $this->verify_payment_status($verify);
+        }
+    }
+    
+    /**
+     * Enqueue payment scripts and styles
+     */
+    public function enqueue_payment_scripts() {
+        wp_enqueue_script('kilismile-payments', get_template_directory_uri() . '/assets/js/payment-system.js', array('jquery'), '1.0.0', true);
+        wp_enqueue_style('kilismile-payments', get_template_directory_uri() . '/assets/css/payment-system.css', array(), '1.0.0');
+        
+        // Localize script with AJAX URL and nonce
+        wp_localize_script('kilismile-payments', 'kilismile_payment_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('kilismile_payment_nonce'),
+            'currency_symbol' => 'TZS',
+            'sandbox_mode' => $this->sandbox_mode,
+            'selcom_public_key' => $this->selcom_public_key
+        ));
+    }
+    
+    /**
+     * Handle donation AJAX request
+     */
+    public function handle_donation_ajax() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'kilismile_payment_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        // Sanitize and validate input
+        $donor_name = sanitize_text_field($_POST['donor_name']);
+        $donor_email = sanitize_email($_POST['donor_email']);
+        $donor_phone = sanitize_text_field($_POST['donor_phone']);
+        $amount = floatval($_POST['amount']);
+        $payment_method = sanitize_text_field($_POST['payment_method']);
+        $donation_type = sanitize_text_field($_POST['donation_type']);
+        $donation_message = sanitize_textarea_field($_POST['donation_message']);
+        $is_anonymous = isset($_POST['is_anonymous']) ? 1 : 0;
+        $is_recurring = isset($_POST['is_recurring']) ? 1 : 0;
+        $recurring_frequency = sanitize_text_field($_POST['recurring_frequency']);
+        
+        // Validate required fields
+        if (empty($donor_name) || empty($donor_email) || empty($amount) || empty($payment_method)) {
+            wp_send_json_error('Please fill in all required fields.');
+            return;
+        }
+        
+        // Validate email
+        if (!is_email($donor_email)) {
+            wp_send_json_error('Please enter a valid email address.');
+            return;
+        }
+        
+        // Validate amount
+        if ($amount < 100) {
+            wp_send_json_error('Minimum donation amount is TZS 100.');
+            return;
+        }
+        
+        // Create donation record
+        $donation_id = $this->create_donation_record(array(
+            'donor_name' => $donor_name,
+            'donor_email' => $donor_email,
+            'donor_phone' => $donor_phone,
+            'amount' => $amount,
+            'payment_method' => $payment_method,
+            'donation_type' => $donation_type,
+            'donation_message' => $donation_message,
+            'is_anonymous' => $is_anonymous,
+            'is_recurring' => $is_recurring,
+            'recurring_frequency' => $recurring_frequency
+        ));
+        
+        if (!$donation_id) {
+            wp_send_json_error('Failed to create donation record.');
+            return;
+        }
+        
+        // Process payment based on method
+        $result = $this->process_payment($donation_id, $payment_method);
+        
+        if ($result['success']) {
+            wp_send_json_success($result['data']);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Create donation record in database
+     */
+    private function create_donation_record($data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'kilismile_donations';
+        
+        $result = $wpdb->insert($table, $data);
+        
+        if ($result === false) {
+            return false;
+        }
+        
+        return $wpdb->insert_id;
+    }
+    
+    /**
+     * Process payment based on selected method
+     */
+    private function process_payment($donation_id, $payment_method) {
+        global $wpdb;
+        
+        // Get donation details
+        $donation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}kilismile_donations WHERE id = %d",
+            $donation_id
+        ));
+        
+        if (!$donation) {
+            return array('success' => false, 'message' => 'Donation not found.');
+        }
+        
+        // Route to appropriate payment processor
+        switch ($payment_method) {
+            case 'selcom_card':
+            case 'selcom_mobile':
+                return $this->process_selcom_payment($donation);
+                
+            case 'azam_mobile':
+                return $this->process_azam_payment($donation);
+                
+            case 'offline_mpesa':
+            case 'offline_tigopesa':
+            case 'offline_bank':
+                return $this->process_offline_payment($donation);
+                
+            default:
+                return array('success' => false, 'message' => 'Invalid payment method.');
+        }
+    }
+    
+    /**
+     * Process Selcom payment
+     */
+    private function process_selcom_payment($donation) {
+        $transaction_ref = 'KS' . time() . $donation->id;
+        
+        // Selcom API endpoint
+        $endpoint = $this->sandbox_mode ? 
+            'https://apigwsandbox.selcommobile.com/v1/checkout' : 
+            'https://apigw.selcommobile.com/v1/checkout';
+        
+        // Prepare payment data
+        $payment_data = array(
+            'vendor' => $this->selcom_merchant_id,
+            'order_id' => $transaction_ref,
+            'buyer_email' => $donation->donor_email,
+            'buyer_name' => $donation->donor_name,
+            'buyer_phone' => $donation->donor_phone,
+            'amount' => $donation->amount,
+            'currency' => 'TZS',
+            'webhook' => home_url('/payment/callback/selcom/'),
+            'success_url' => home_url('/donation-success/'),
+            'error_url' => home_url('/donation-error/'),
+            'cancel_url' => home_url('/donation-cancel/')
+        );
+        
+        // Create transaction record
+        $this->create_transaction_record($donation->id, $transaction_ref, 'selcom', $payment_data);
+        
+        // Make API request
+        $response = $this->make_selcom_request($endpoint, $payment_data);
+        
+        if ($response && isset($response['checkout_url'])) {
+            return array(
+                'success' => true,
+                'data' => array(
+                    'payment_url' => $response['checkout_url'],
+                    'transaction_ref' => $transaction_ref,
+                    'method' => 'redirect'
+                )
+            );
+        }
+        
+        return array('success' => false, 'message' => 'Failed to initialize Selcom payment.');
+    }
+    
+    /**
+     * Process Azam Pay payment
+     */
+    private function process_azam_payment($donation) {
+        $transaction_ref = 'KS' . time() . $donation->id;
+        
+        // Azam Pay API endpoint
+        $endpoint = $this->sandbox_mode ? 
+            'https://sandbox.azampay.co.tz/azampay/mno/checkout' : 
+            'https://checkout.azampay.co.tz/azampay/mno/checkout';
+        
+        // Prepare payment data
+        $payment_data = array(
+            'appName' => 'KiliSmile',
+            'clientId' => $this->azam_merchant_id,
+            'vendorId' => $this->azam_merchant_id,
+            'language' => 'SW',
+            'currency' => 'TZS',
+            'externalId' => $transaction_ref,
+            'requestOrigin' => home_url(),
+            'redirectFailURL' => home_url('/donation-error/'),
+            'redirectSuccessURL' => home_url('/donation-success/'),
+            'vendorName' => 'Kilismile Organization',
+            'amount' => $donation->amount,
+            'cart' => array(
+                'items' => array(
+                    array(
+                        'name' => 'Donation to Kilismile'
+                    )
+                )
+            )
+        );
+        
+        // Create transaction record
+        $this->create_transaction_record($donation->id, $transaction_ref, 'azam', $payment_data);
+        
+        // Make API request
+        $response = $this->make_azam_request($endpoint, $payment_data);
+        
+        if ($response && isset($response['data']['checkout_url'])) {
+            return array(
+                'success' => true,
+                'data' => array(
+                    'payment_url' => $response['data']['checkout_url'],
+                    'transaction_ref' => $transaction_ref,
+                    'method' => 'redirect'
+                )
+            );
+        }
+        
+        return array('success' => false, 'message' => 'Failed to initialize Azam Pay payment.');
+    }
+    
+    /**
+     * Process offline payment (manual instructions)
+     */
+    private function process_offline_payment($donation) {
+        global $wpdb;
+        
+        $transaction_ref = 'KS' . time() . $donation->id;
+        
+        // Get payment method instructions
+        $method = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}kilismile_payment_methods WHERE method_code = %s",
+            $donation->payment_method
+        ));
+        
+        if (!$method) {
+            return array('success' => false, 'message' => 'Payment method not found.');
+        }
+        
+        // Create transaction record
+        $this->create_transaction_record($donation->id, $transaction_ref, 'offline', array(
+            'instructions' => $method->instructions,
+            'amount' => $donation->amount
+        ));
+        
+        // Send instruction email
+        $this->send_payment_instruction_email($donation, $method, $transaction_ref);
+        
+        return array(
+            'success' => true,
+            'data' => array(
+                'method' => 'instructions',
+                'transaction_ref' => $transaction_ref,
+                'instructions' => $method->instructions,
+                'amount' => $donation->amount,
+                'payment_method' => $method->method_name
+            )
+        );
+    }
+    
+    /**
+     * Create transaction record
+     */
+    private function create_transaction_record($donation_id, $transaction_ref, $gateway, $request_data) {
+        global $wpdb;
+        
+        $wpdb->insert(
+            $wpdb->prefix . 'kilismile_payment_transactions',
+            array(
+                'donation_id' => $donation_id,
+                'transaction_reference' => $transaction_ref,
+                'gateway' => $gateway,
+                'amount' => $request_data['amount'] ?? 0,
+                'currency' => 'TZS',
+                'gateway_request' => json_encode($request_data)
+            )
+        );
+        
+        return $wpdb->insert_id;
+    }
+    
+    /**
+     * Make Selcom API request
+     */
+    private function make_selcom_request($endpoint, $data) {
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $this->selcom_private_key
+        );
+        
+        $response = wp_remote_post($endpoint, array(
+            'headers' => $headers,
+            'body' => json_encode($data),
+            'timeout' => 30
+        ));
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        return json_decode(wp_remote_retrieve_body($response), true);
+    }
+    
+    /**
+     * Make Azam Pay API request
+     */
+    private function make_azam_request($endpoint, $data) {
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'X-API-Key' => $this->azam_api_key
+        );
+        
+        $response = wp_remote_post($endpoint, array(
+            'headers' => $headers,
+            'body' => json_encode($data),
+            'timeout' => 30
+        ));
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        return json_decode(wp_remote_retrieve_body($response), true);
+    }
+    
+    /**
+     * Send payment instruction email
+     */
+    private function send_payment_instruction_email($donation, $method, $transaction_ref) {
+        $subject = 'Payment Instructions - Kilismile Donation';
+        $message = "Dear {$donation->donor_name},\n\n";
+        $message .= "Thank you for your generous donation of TZS " . number_format($donation->amount, 2) . " to Kilismile Organization.\n\n";
+        $message .= "Payment Method: {$method->method_name}\n";
+        $message .= "Transaction Reference: {$transaction_ref}\n\n";
+        $message .= "Payment Instructions:\n{$method->instructions}\n\n";
+        $message .= "Please keep your transaction reference for your records.\n\n";
+        $message .= "Thank you for supporting our mission!\n\n";
+        $message .= "Best regards,\nKilismile Organization";
+        
+        wp_mail($donation->donor_email, $subject, $message);
+    }
+    
+    /**
+     * Process payment callback
+     */
+    public function process_payment_callback($gateway) {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        switch ($gateway) {
+            case 'selcom':
+                $this->handle_selcom_callback($data);
+                break;
+                
+            case 'azam':
+                $this->handle_azam_callback($data);
+                break;
+        }
+        
+        // Always return 200 OK for callbacks
+        http_response_code(200);
+        exit;
+    }
+    
+    /**
+     * Handle Selcom payment callback
+     */
+    private function handle_selcom_callback($data) {
+        global $wpdb;
+        
+        if (!isset($data['order_id']) || !isset($data['status'])) {
+            return;
+        }
+        
+        $transaction_ref = sanitize_text_field($data['order_id']);
+        $status = sanitize_text_field($data['status']);
+        
+        // Update transaction
+        $wpdb->update(
+            $wpdb->prefix . 'kilismile_payment_transactions',
+            array(
+                'status' => $status === 'COMPLETED' ? 'completed' : 'failed',
+                'gateway_transaction_id' => $data['transaction_id'] ?? '',
+                'gateway_response' => json_encode($data),
+                'processed_at' => current_time('mysql')
+            ),
+            array('transaction_reference' => $transaction_ref)
+        );
+        
+        // Update donation status
+        if ($status === 'COMPLETED') {
+            $this->mark_donation_completed($transaction_ref);
+        }
+    }
+    
+    /**
+     * Handle Azam Pay callback
+     */
+    private function handle_azam_callback($data) {
+        global $wpdb;
+        
+        if (!isset($data['externalId']) || !isset($data['status'])) {
+            return;
+        }
+        
+        $transaction_ref = sanitize_text_field($data['externalId']);
+        $status = sanitize_text_field($data['status']);
+        
+        // Update transaction
+        $wpdb->update(
+            $wpdb->prefix . 'kilismile_payment_transactions',
+            array(
+                'status' => $status === 'success' ? 'completed' : 'failed',
+                'gateway_transaction_id' => $data['transactionId'] ?? '',
+                'gateway_response' => json_encode($data),
+                'processed_at' => current_time('mysql')
+            ),
+            array('transaction_reference' => $transaction_ref)
+        );
+        
+        // Update donation status
+        if ($status === 'success') {
+            $this->mark_donation_completed($transaction_ref);
+        }
+    }
+    
+    /**
+     * Mark donation as completed
+     */
+    private function mark_donation_completed($transaction_ref) {
+        global $wpdb;
+        
+        // Get transaction
+        $transaction = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}kilismile_payment_transactions WHERE transaction_reference = %s",
+            $transaction_ref
+        ));
+        
+        if (!$transaction) {
+            return;
+        }
+        
+        // Update donation status
+        $wpdb->update(
+            $wpdb->prefix . 'kilismile_donations',
+            array(
+                'payment_status' => 'completed',
+                'transaction_id' => $transaction->gateway_transaction_id
+            ),
+            array('id' => $transaction->donation_id)
+        );
+        
+        // Send thank you email
+        $this->send_donation_confirmation_email($transaction->donation_id);
+    }
+    
+    /**
+     * Send donation confirmation email
+     */
+    private function send_donation_confirmation_email($donation_id) {
+        global $wpdb;
+        
+        $donation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}kilismile_donations WHERE id = %d",
+            $donation_id
+        ));
+        
+        if (!$donation || $donation->is_anonymous) {
+            return;
+        }
+        
+        $subject = 'Thank You for Your Donation - Kilismile Organization';
+        $message = "Dear {$donation->donor_name},\n\n";
+        $message .= "Thank you for your generous donation of TZS " . number_format($donation->amount, 2) . " to Kilismile Organization.\n\n";
+        $message .= "Your support helps us continue our mission to improve health education and community well-being in Tanzania.\n\n";
+        $message .= "Transaction Details:\n";
+        $message .= "Amount: TZS " . number_format($donation->amount, 2) . "\n";
+        $message .= "Transaction ID: {$donation->transaction_id}\n";
+        $message .= "Date: " . date('F j, Y', strtotime($donation->created_at)) . "\n\n";
+        $message .= "Your donation will be used to support our programs in health education, preventive care, and community development.\n\n";
+        $message .= "Thank you for making a difference!\n\n";
+        $message .= "Best regards,\nKilismile Organization Team";
+        
+        wp_mail($donation->donor_email, $subject, $message);
+    }
+    
+    /**
+     * Verify payment status
+     */
+    public function verify_payment_status($transaction_ref) {
+        global $wpdb;
+        
+        $transaction = $wpdb->get_row($wpdb->prepare(
+            "SELECT t.*, d.* FROM {$wpdb->prefix}kilismile_payment_transactions t 
+             JOIN {$wpdb->prefix}kilismile_donations d ON t.donation_id = d.id 
+             WHERE t.transaction_reference = %s",
+            $transaction_ref
+        ));
+        
+        if (!$transaction) {
+            wp_send_json_error('Transaction not found.');
+            return;
+        }
+        
+        wp_send_json_success(array(
+            'status' => $transaction->payment_status,
+            'amount' => $transaction->amount,
+            'transaction_ref' => $transaction_ref
+        ));
+    }
+    
+    /**
+     * Handle payment verification AJAX
+     */
+    public function handle_payment_verification() {
+        if (!wp_verify_nonce($_POST['nonce'], 'kilismile_payment_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        $transaction_ref = sanitize_text_field($_POST['transaction_ref']);
+        $this->verify_payment_status($transaction_ref);
+    }
+    
+    /**
+     * Get available payment methods
+     */
+    public function get_payment_methods() {
+        global $wpdb;
+        
+        return $wpdb->get_results(
+            "SELECT * FROM {$wpdb->prefix}kilismile_payment_methods 
+             WHERE is_active = 1 
+             ORDER BY display_order ASC, method_name ASC"
+        );
+    }
+    
+    /**
+     * Add admin menu for payment management
+     */
+    public function add_admin_menu() {
+        add_menu_page(
+            'Payment System',
+            'Donations',
+            'manage_options',
+            'kilismile-payments',
+            array($this, 'admin_page'),
+            'dashicons-heart',
+            30
+        );
+        
+        add_submenu_page(
+            'kilismile-payments',
+            'Payment Settings',
+            'Settings',
+            'manage_options',
+            'kilismile-payment-settings',
+            array($this, 'settings_page')
+        );
+    }
+    
+    /**
+     * Initialize admin settings
+     */
+    public function admin_init() {
+        // Register settings
+        register_setting('kilismile_payment_settings', 'kilismile_selcom_public_key');
+        register_setting('kilismile_payment_settings', 'kilismile_selcom_private_key');
+        register_setting('kilismile_payment_settings', 'kilismile_azam_api_key');
+        register_setting('kilismile_payment_settings', 'kilismile_azam_merchant_id');
+        register_setting('kilismile_payment_settings', 'kilismile_payment_sandbox');
+    }
+    
+    /**
+     * Admin page for viewing donations
+     */
+    public function admin_page() {
+        global $wpdb;
+        
+        $donations = $wpdb->get_results(
+            "SELECT * FROM {$wpdb->prefix}kilismile_donations 
+             ORDER BY created_at DESC LIMIT 50"
+        );
+        
+        include get_template_directory() . '/admin/payment-admin.php';
+    }
+    
+    /**
+     * Settings page for payment configuration
+     */
+    public function settings_page() {
+        include get_template_directory() . '/admin/payment-settings.php';
+    }
+    
+    /**
+     * Render donation form
+     */
+    public function render_donation_form($args = array()) {
+        $defaults = array(
+            'show_recurring' => true,
+            'show_message' => true,
+            'show_anonymous' => true,
+            'class' => 'kilismile-donation-form',
+            'submit_text' => 'Donate Now'
+        );
+        
+        $args = wp_parse_args($args, $defaults);
+        $payment_methods = $this->get_payment_methods();
+        
+        ob_start();
+        include get_template_directory() . '/templates/donation-form.php';
+        return ob_get_clean();
+    }
+}
+
+// Helper function for donation form
+if (!function_exists('kilismile_donation_form')) {
+    function kilismile_donation_form($args = array()) {
+        global $kilismile_payment_system;
+        if (!$kilismile_payment_system) {
+            $kilismile_payment_system = new KiliSmile_Payment_System();
+        }
+        return $kilismile_payment_system->render_donation_form($args);
+    }
+}
+
+// Initialize the payment system
+if (!isset($GLOBALS['kilismile_payment_system'])) {
+    $GLOBALS['kilismile_payment_system'] = new KiliSmile_Payment_System();
+}

@@ -1,6 +1,6 @@
 <?php
 /**
- * Newsletter Functions for Kili Smile Organization
+ * Newsletter Functions for Kilismile Organization
  * 
  * @package KiliSmile
  */
@@ -141,7 +141,7 @@ function kilismile_send_confirmation_email($email, $first_name, $token) {
         home_url()
     );
     
-    $subject = __('Confirm Your Newsletter Subscription - Kili Smile Organization', 'kilismile');
+    $subject = __('Confirm Your Newsletter Subscription - Kilismile Organization', 'kilismile');
     
     // Use the enhanced email system if available
     if (function_exists('kilismile_send_welcome')) {
@@ -157,7 +157,7 @@ function kilismile_send_confirmation_email($email, $first_name, $token) {
     $message = sprintf(
         __('Hello %s,
 
-Thank you for subscribing to the Kili Smile Organization newsletter!
+Thank you for subscribing to the Kilismile Organization newsletter!
 
 To complete your subscription, please click the link below:
 %s
@@ -165,10 +165,10 @@ To complete your subscription, please click the link below:
 If you did not request this subscription, you can safely ignore this email.
 
 Best regards,
-The Kili Smile Team
+The Kilismile Team
 
 --
-Kili Smile Organization
+Kilismile Organization
 "No health without oral health"
 Email: %s
 Website: %s', 'kilismile'),
@@ -180,7 +180,7 @@ Website: %s', 'kilismile'),
     
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'From: Kili Smile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
+        'From: Kilismile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
     );
     
     return wp_mail($email, $subject, $message, $headers);
@@ -232,7 +232,7 @@ add_action('wp', 'kilismile_handle_newsletter_confirmation');
  * Send Welcome Email
  */
 function kilismile_send_welcome_email($email, $first_name) {
-    $subject = __('Welcome to Kili Smile Newsletter!', 'kilismile');
+    $subject = __('Welcome to Kilismile Newsletter!', 'kilismile');
     
     // Use the enhanced email system if available
     if (function_exists('kilismile_send_welcome')) {
@@ -243,7 +243,7 @@ function kilismile_send_welcome_email($email, $first_name) {
     $message = sprintf(
         __('Hello %s,
 
-Welcome to the Kili Smile Organization newsletter family!
+Welcome to the Kilismile Organization newsletter family!
 
 Your subscription has been confirmed successfully. You will now receive our updates about:
 
@@ -260,10 +260,10 @@ Learn about our programs: %s/programs
 Get involved: %s/volunteer
 
 Best regards,
-The Kili Smile Team
+The Kilismile Team
 
 --
-Kili Smile Organization
+Kilismile Organization
 "No health without oral health"
 Registration: %s
 Email: %s', 'kilismile'),
@@ -277,7 +277,7 @@ Email: %s', 'kilismile'),
     
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'From: Kili Smile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
+        'From: Kilismile Organization <' . get_theme_mod('kilismile_email', 'kilismile21@gmail.com') . '>'
     );
     
     return wp_mail($email, $subject, $message, $headers);
@@ -428,7 +428,7 @@ function kilismile_newsletter_form_shortcode($atts) {
                 <label class="checkbox-label">
                     <input type="checkbox" name="consent" value="yes" required>
                     <span class="checkmark"></span>
-                    <?php _e('I agree to receive newsletters and communications from Kili Smile Organization. You can unsubscribe at any time.', 'kilismile'); ?>
+                    <?php _e('I agree to receive newsletters and communications from Kilismile Organization. You can unsubscribe at any time.', 'kilismile'); ?>
                 </label>
             </div>
             
@@ -968,3 +968,5 @@ function kilismile_newsletter_subscribers_page() {
     <?php
 }
 ?>
+
+

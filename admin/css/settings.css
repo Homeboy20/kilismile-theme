@@ -1,0 +1,910 @@
+/**
+ * Enhanced KiliSmile Theme Settings Styles
+ * 
+ * Modern, responsive design for the theme settings panel
+ * 
+ * @package KiliSmile
+ * @version 3.0.0
+ */
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+.kilismile-settings-wrap * {
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Settings Fields
+   ========================================================================== */
+
+.setting-field {
+    margin-bottom: 35px;
+    padding: 25px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.setting-field:hover {
+    border-color: #c3c4c7;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.field-header {
+    margin-bottom: 20px;
+}
+
+.field-header label {
+    display: block;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #1e1e1e;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.field-description {
+    color: #646970;
+    font-size: 0.95em;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.field-content {
+    position: relative;
+}
+
+/* ==========================================================================
+   Input Styles
+   ========================================================================== */
+
+.setting-field input[type="text"],
+.setting-field input[type="email"],
+.setting-field input[type="url"],
+.setting-field input[type="number"],
+.setting-field input[type="date"],
+.setting-field textarea,
+.setting-field select {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #2c3338;
+    background: #fff;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.setting-field input:focus,
+.setting-field textarea:focus,
+.setting-field select:focus {
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+}
+
+.setting-field input.small-text {
+    width: 120px;
+}
+
+.setting-field input.regular-text {
+    max-width: 400px;
+}
+
+.setting-field textarea.large-text {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* ==========================================================================
+   Toggle Switch
+   ========================================================================== */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 32px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #dcdcde;
+    border-radius: 32px;
+    transition: all 0.3s ease;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #00a32a;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(28px);
+}
+
+.toggle-switch:hover .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(0, 163, 42, 0.1);
+}
+
+/* ==========================================================================
+   Color Picker
+   ========================================================================== */
+
+.setting-field-color .field-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.color-picker {
+    width: 60px !important;
+    height: 40px;
+    border: none !important;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.color-picker:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================================================
+   Radio Image Options
+   ========================================================================== */
+
+.setting-field-radio_image .field-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.radio-image-option {
+    position: relative;
+    border: 3px solid #dcdcde;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.radio-image-option:hover {
+    border-color: #2271b1;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.radio-image-option.selected {
+    border-color: #00a32a;
+    box-shadow: 0 0 0 3px rgba(0, 163, 42, 0.2);
+}
+
+.radio-image-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.radio-image-preview {
+    width: 100%;
+    height: 120px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+}
+
+.radio-image-label {
+    padding: 15px;
+    font-weight: 600;
+    text-align: center;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    color: #2c3338;
+}
+
+.radio-image-option.selected .radio-image-label {
+    background: #00a32a;
+    color: white;
+}
+
+.radio-image-option .check-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background: #00a32a;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+}
+
+.radio-image-option.selected .check-icon {
+    display: flex;
+}
+
+/* ==========================================================================
+   Color Palette
+   ========================================================================== */
+
+.setting-field-color_palette .field-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.color-palette-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.color-palette-label {
+    font-weight: 500;
+    color: #2c3338;
+    font-size: 0.9em;
+}
+
+.color-palette-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-palette-input .color-picker {
+    width: 40px !important;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.color-palette-input input[type="text"] {
+    flex: 1;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   Slider Controls
+   ========================================================================== */
+
+.setting-field-slider .field-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.slider-input {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #dcdcde;
+    border-radius: 4px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #2271b1;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.slider-input::-webkit-slider-thumb:hover {
+    background: #135e96;
+    transform: scale(1.1);
+}
+
+.slider-input::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #2271b1;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.slider-value {
+    min-width: 80px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    font-weight: 600;
+    text-align: center;
+    color: #2c3338;
+}
+
+/* ==========================================================================
+   Typography Selector
+   ========================================================================== */
+
+.setting-field-typography .typography-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.typography-font {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.typography-font label {
+    font-weight: 500;
+    color: #2c3338;
+    font-size: 0.95em;
+}
+
+.typography-font select {
+    padding: 12px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+}
+
+.font-preview {
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+/* ==========================================================================
+   Code Editor
+   ========================================================================== */
+
+.setting-field-code_editor .field-content {
+    border: 2px solid #dcdcde;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.code-editor-toolbar {
+    background: #f1f1f1;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dcdcde;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #646970;
+}
+
+.code-editor-content {
+    position: relative;
+    min-height: 200px;
+}
+
+.code-editor-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 20px;
+    border: none;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    tab-size: 4;
+}
+
+/* ==========================================================================
+   Group Fields
+   ========================================================================== */
+
+.setting-field-group .group-fields {
+    display: grid;
+    gap: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.group-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.group-field label {
+    font-weight: 500;
+    color: #2c3338;
+    font-size: 0.95em;
+}
+
+/* ==========================================================================
+   Repeater Fields
+   ========================================================================== */
+
+.setting-field-repeater .repeater-items {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.repeater-item {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fff;
+    position: relative;
+}
+
+.repeater-item:last-child {
+    border-bottom: none;
+}
+
+.repeater-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.repeater-item-title {
+    font-weight: 600;
+    color: #2c3338;
+}
+
+.repeater-item-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.repeater-action {
+    padding: 5px 8px;
+    border: none;
+    background: transparent;
+    color: #646970;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.repeater-action:hover {
+    background: #f0f0f0;
+    color: #2c3338;
+}
+
+.repeater-action.delete:hover {
+    background: #dc3232;
+    color: white;
+}
+
+.repeater-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.repeater-add {
+    padding: 15px;
+    text-align: center;
+    background: #f8f9fa;
+    border: 2px dashed #c3c4c7;
+    border-radius: 8px;
+    color: #646970;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.repeater-add:hover {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: white;
+}
+
+/* ==========================================================================
+   Social Links
+   ========================================================================== */
+
+.setting-field-social_links .social-networks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.social-network {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.social-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.social-icon.facebook { background: #1877f2; }
+.social-icon.twitter { background: #1da1f2; }
+.social-icon.instagram { background: #e4405f; }
+.social-icon.linkedin { background: #0077b5; }
+.social-icon.youtube { background: #ff0000; }
+.social-icon.whatsapp { background: #25d366; }
+
+.social-network input {
+    flex: 1;
+    margin: 0;
+}
+
+/* ==========================================================================
+   Checkbox Groups
+   ========================================================================== */
+
+.setting-field-checkbox_group .checkbox-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.checkbox-option:hover {
+    background: #e8f4fd;
+    border-color: #2271b1;
+}
+
+.checkbox-option.checked {
+    background: #d7f3e3;
+    border-color: #00a32a;
+}
+
+.checkbox-option input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.checkbox-option label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #2c3338;
+}
+
+/* ==========================================================================
+   Conditional Fields
+   ========================================================================== */
+
+.setting-field.conditional-hidden {
+    display: none;
+}
+
+.setting-field.conditional-show {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   Notifications
+   ========================================================================== */
+
+.kilismile-notification {
+    position: fixed;
+    top: 32px;
+    right: 20px;
+    padding: 15px 20px;
+    background: white;
+    border-left: 4px solid;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    min-width: 300px;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.kilismile-notification.show {
+    transform: translateX(0);
+}
+
+.kilismile-notification.success {
+    border-color: #00a32a;
+}
+
+.kilismile-notification.error {
+    border-color: #dc3232;
+}
+
+.kilismile-notification.warning {
+    border-color: #ffb900;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification-icon {
+    font-size: 18px;
+}
+
+.notification-message {
+    flex: 1;
+    font-weight: 500;
+    color: #2c3338;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #646970;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.setting-field.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.setting-field.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    z-index: 10;
+}
+
+.setting-field.loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2271b1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 11;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+    .setting-field-radio_image .field-content {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .setting-field-color_palette .field-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .social-networks {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .setting-field {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+    }
+    
+    .setting-field-radio_image .field-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .typography-controls {
+        grid-template-columns: 1fr;
+    }
+    
+    .repeater-fields {
+        grid-template-columns: 1fr;
+    }
+    
+    .checkbox-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .setting-field-slider .field-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .slider-value {
+        align-self: center;
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .setting-field {
+        padding: 15px 10px;
+        margin-bottom: 15px;
+    }
+    
+    .field-header label {
+        font-size: 1.1em;
+    }
+    
+    .social-network {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .kilismile-notification {
+        left: 10px;
+        right: 10px;
+        min-width: auto;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .kilismile-settings-wrap {
+        background: white;
+        box-shadow: none;
+    }
+    
+    .kilismile-settings-header,
+    .settings-navigation,
+    .settings-sidebar {
+        display: none;
+    }
+    
+    .kilismile-settings-body {
+        grid-template-columns: 1fr;
+    }
+    
+    .setting-field {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .kilismile-settings-wrap {
+        background: #1e1e1e;
+        color: #d4d4d4;
+    }
+    
+    .setting-field {
+        background: #2d2d2d;
+        border-color: #404040;
+        color: #d4d4d4;
+    }
+    
+    .field-header label {
+        color: #f0f0f0;
+    }
+    
+    .field-description {
+        color: #a0a0a0;
+    }
+    
+    .setting-field input,
+    .setting-field textarea,
+    .setting-field select {
+        background: #3d3d3d;
+        border-color: #555;
+        color: #d4d4d4;
+    }
+    
+    .setting-field input:focus,
+    .setting-field textarea:focus,
+    .setting-field select:focus {
+        border-color: #4f94cd;
+        box-shadow: 0 0 0 3px rgba(79, 148, 205, 0.1);
+    }
+}
+
+

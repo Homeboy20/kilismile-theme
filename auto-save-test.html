@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiliSmile Auto-Save Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .test-section { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 5px; 
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 3px; 
+        }
+        .success { background: #d4edda; color: #155724; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        input, textarea, select { 
+            width: 100%; 
+            padding: 8px; 
+            margin: 5px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 3px; 
+        }
+        .auto-save-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: #007cba;
+            color: white;
+            border-radius: 3px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 KiliSmile Auto-Save Feature Test</h1>
+    
+    <div class="status info">
+        <strong>Auto-Save Test Mode:</strong> This page simulates the auto-save functionality to verify it works correctly.
+    </div>
+    
+    <div class="auto-save-indicator" id="auto-save-indicator">
+        💾 Auto-saving...
+    </div>
+    
+    <form id="test-settings-form">
+        <div class="test-section">
+            <h3>General Settings</h3>
+            <label>Site Title:</label>
+            <input type="text" name="site_title" id="site_title" value="KiliSmile Organization">
+            
+            <label>Site Mode:</label>
+            <select name="site_mode" id="site_mode">
+                <option value="charity">Charity</option>
+                <option value="ngo">NGO</option>
+                <option value="nonprofit">Non-Profit</option>
+            </select>
+        </div>
+        
+        <div class="test-section">
+            <h3>Appearance Settings</h3>
+            <label>Primary Color:</label>
+            <input type="color" name="primary_color" id="primary_color" value="#007cba">
+            
+            <label>Description:</label>
+            <textarea name="description" id="description" rows="3">KiliSmile is dedicated to making a positive impact in our community.</textarea>
+        </div>
+        
+        <div class="test-section">
+            <h3>Performance Settings</h3>
+            <label>
+                <input type="checkbox" name="lazy_loading" id="lazy_loading" checked>
+                Enable Lazy Loading
+            </label>
+            
+            <label>
+                <input type="checkbox" name="font_preload" id="font_preload">
+                Preload Fonts
+            </label>
+        </div>
+    </form>
+    
+    <div class="test-section">
+        <h3>📊 Auto-Save Test Results</h3>
+        <div id="test-results">
+            <div class="status info">
+                <strong>Instructions:</strong> Make changes to any field above. The auto-save should trigger after 3 seconds of inactivity.
+            </div>
+            <div id="change-log"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulate KiliSmile auto-save functionality
+        const AutoSaveTest = {
+            autoSaveDelay: 3000, // 3 seconds
+            autoSaveTimeout: null,
+            isDirty: false,
+            changeCount: 0,
+            
+            init: function() {
+                this.bindEvents();
+                this.log('✅ Auto-save test initialized');
+            },
+            
+            bindEvents: function() {
+                const form = document.getElementById('test-settings-form');
+                const inputs = form.querySelectorAll('input, textarea, select');
+                
+                inputs.forEach(input => {
+                    input.addEventListener('change', () => this.handleFieldChange(input));
+                    input.addEventListener('input', () => this.handleFieldChange(input));
+                });
+            },
+            
+            handleFieldChange: function(field) {
+                this.isDirty = true;
+                this.changeCount++;
+                this.log(`📝 Field changed: ${field.name} = ${field.value || field.checked}`);
+                this.triggerAutoSave();
+            },
+            
+            triggerAutoSave: function() {
+                clearTimeout(this.autoSaveTimeout);
+                this.showAutoSaveIndicator();
+                
+                this.autoSaveTimeout = setTimeout(() => {
+                    this.performAutoSave();
+                }, this.autoSaveDelay);
+                
+                this.log(`⏱️ Auto-save scheduled in 3 seconds... (Change #${this.changeCount})`);
+            },
+            
+            performAutoSave: function() {
+                if (!this.isDirty) return;
+                
+                this.showAutoSaveIndicator();
+                
+                // Simulate AJAX save
+                setTimeout(() => {
+                    this.isDirty = false;
+                    this.hideAutoSaveIndicator();
+                    this.log(`💾 ✅ Auto-save completed successfully! (Total changes: ${this.changeCount})`);
+                }, 1000);
+            },
+            
+            showAutoSaveIndicator: function() {
+                document.getElementById('auto-save-indicator').style.display = 'block';
+            },
+            
+            hideAutoSaveIndicator: function() {
+                document.getElementById('auto-save-indicator').style.display = 'none';
+            },
+            
+            log: function(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'status success';
+                logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+                
+                const changeLog = document.getElementById('change-log');
+                changeLog.insertBefore(logEntry, changeLog.firstChild);
+                
+                // Keep only last 10 entries
+                while (changeLog.children.length > 10) {
+                    changeLog.removeChild(changeLog.lastChild);
+                }
+            }
+        };
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            AutoSaveTest.init();
+        });
+    </script>
+</body>
+</html>

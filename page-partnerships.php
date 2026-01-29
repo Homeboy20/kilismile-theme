@@ -42,7 +42,7 @@ get_header(); ?>
                 <?php _e('Partnership Opportunities', 'kilismile'); ?>
             </h2>
             <p style="text-align: center; color: var(--text-secondary); font-size: 1.2rem; max-width: 600px; margin: 0 auto 60px; line-height: 1.6;">
-                <?php _e('Explore different ways to collaborate with Kili Smile and make a meaningful impact together.', 'kilismile'); ?>
+                <?php _e('Explore different ways to collaborate with Kilismile and make a meaningful impact together.', 'kilismile'); ?>
             </p>
 
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; align-items: stretch;">
@@ -542,3 +542,5 @@ document.getElementById('partnership-form').addEventListener('submit', function(
 </style>
 
 <?php get_footer(); ?>
+
+

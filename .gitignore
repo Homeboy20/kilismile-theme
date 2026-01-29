@@ -38,6 +38,12 @@ vendor/
 .env
 .env.*
 
+# Ignore local keys
+kilikey
+kilikey.pub
+*.pem
+*.key
+
 # Ignore npm package lock
 package-lock.json
 yarn.lock

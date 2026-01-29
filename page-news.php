@@ -60,6 +60,49 @@ get_header(); ?>
 
                     if ($news_query->have_posts()) : ?>
                         <div class="news-grid" style="display: grid; gap: 30px;">
+                            <!-- Featured: World Oral Health Week 2026 -->
+                            <article class="news-item featured-news" style="display: flex; gap: 25px; background: linear-gradient(135deg, var(--primary-green), var(--accent-green)); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); transition: all 0.3s ease; color: white; margin-bottom: 20px;">
+                                <div class="news-content" style="flex: 1;">
+                                    <div class="news-meta" style="color: rgba(255,255,255,0.9); font-size: 0.9rem; margin-bottom: 10px; font-weight: 600;">
+                                        <i class="fas fa-star" aria-hidden="true"></i> <?php _e('FEATURED EVENT', 'kilismile'); ?>
+                                        <span style="margin: 0 10px;">•</span>
+                                        <time datetime="2026-03-20">
+                                            <i class="fas fa-calendar" aria-hidden="true"></i>
+                                            <?php _e('March 14-20, 2026', 'kilismile'); ?>
+                                        </time>
+                                    </div>
+                                    
+                                    <h3 style="margin: 0 0 15px 0; font-size: 1.8rem; line-height: 1.3; color: white;">
+                                        <?php _e('World Oral Health Week 2026 - Moshi, Tanzania', 'kilismile'); ?>
+                                    </h3>
+                                    
+                                    <p style="line-height: 1.8; margin-bottom: 20px; font-size: 1.05rem; color: rgba(255,255,255,0.95);">
+                                        <?php _e('Join us in celebrating World Oral Health Week alongside the official launch of KiliSmile Organization office and our modern dental clinic in Moshi. This milestone event will feature community health screenings, oral health education, and professional treatment services. Our dental clinic, established in April 2025, will serve as a permanent treatment center for the Moshi community and neighboring areas.', 'kilismile'); ?>
+                                    </p>
+                                    
+                                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                                        <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
+                                            <i class="fas fa-clinic-medical" aria-hidden="true"></i>
+                                            <?php _e('Clinic Launch', 'kilismile'); ?>
+                                        </div>
+                                        <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
+                                            <i class="fas fa-tooth" aria-hidden="true"></i>
+                                            <?php _e('Free Screenings', 'kilismile'); ?>
+                                        </div>
+                                        <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
+                                            <i class="fas fa-users" aria-hidden="true"></i>
+                                            <?php _e('Community Event', 'kilismile'); ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <a href="<?php echo esc_url(home_url('/programs')); ?>" 
+                                       style="background: white; color: var(--primary-green); padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.2);">
+                                        <?php _e('Learn More About This Event', 'kilismile'); ?>
+                                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </article>
+                            
                             <?php while ($news_query->have_posts()) : $news_query->the_post(); ?>
                                 <article class="news-item" style="display: flex; gap: 25px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
                                     <?php if (has_post_thumbnail()) : ?>
@@ -114,7 +157,7 @@ get_header(); ?>
                         <div style="text-align: center; padding: 60px 20px; background: var(--light-gray); border-radius: 15px;">
                             <i class="fas fa-newspaper" style="font-size: 4rem; color: var(--medium-gray); margin-bottom: 20px;" aria-hidden="true"></i>
                             <h3 style="color: var(--dark-green); margin-bottom: 15px;"><?php _e('No news available', 'kilismile'); ?></h3>
-                            <p style="color: var(--text-secondary);"><?php _e('Check back soon for the latest updates from Kili Smile Organization.', 'kilismile'); ?></p>
+                            <p style="color: var(--text-secondary);"><?php _e('Check back soon for the latest updates from Kilismile Organization.', 'kilismile'); ?></p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -428,7 +471,7 @@ function addToCalendar(title, date, location) {
     const eventDate = new Date(date);
     const startDate = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&location=${encodeURIComponent(location || '')}&details=${encodeURIComponent('Event organized by Kili Smile Organization')}`;
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&location=${encodeURIComponent(location || '')}&details=${encodeURIComponent('Event organized by Kilismile Organization')}`;
     
     window.open(googleCalendarUrl, '_blank');
 }
@@ -509,3 +552,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 
 <?php get_footer(); ?>
+
+

@@ -546,7 +546,11 @@ class KiliSmile_Donation_Database {
             );
             
             $value = $this->wpdb->get_var($sql);
-            
+
+            if ($value === null || $value === '') {
+                return $value;
+            }
+
             // Try to decode JSON
             $decoded = json_decode($value, true);
             return $decoded !== null ? $decoded : $value;
@@ -560,6 +564,11 @@ class KiliSmile_Donation_Database {
             $meta = array();
             
             foreach ($results as $row) {
+                if ($row->meta_value === null || $row->meta_value === '') {
+                    $meta[$row->meta_key] = $row->meta_value;
+                    continue;
+                }
+
                 $decoded = json_decode($row->meta_value, true);
                 $meta[$row->meta_key] = $decoded !== null ? $decoded : $row->meta_value;
             }

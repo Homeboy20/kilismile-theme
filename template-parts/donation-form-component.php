@@ -36,6 +36,19 @@ if (!isset($suggested_amounts)) {
 }
 if (!isset($default_currency)) $default_currency = 'USD';
 
+$azampay_enabled = (bool) get_option('kilismile_azampay_enabled', true);
+$paypal_enabled = (bool) get_option('kilismile_paypal_enabled', false);
+$manual_enabled = (int) get_option('kilismile_local_bank_enabled', 1) === 1;
+
+$default_payment_method = '';
+if ($azampay_enabled) {
+    $default_payment_method = 'azampay';
+} elseif ($paypal_enabled) {
+    $default_payment_method = 'paypal';
+} elseif ($manual_enabled) {
+    $default_payment_method = 'manual_transfer';
+}
+
 $args = wp_parse_args($args ?? array(), array(
     'class' => 'kilismile-donation-form',
     'show_recurring' => true,
@@ -222,48 +235,59 @@ echo '</div>';
                         <h4><?php _e('Select Payment Method', 'kilismile'); ?></h4>
                         
                         <div class="payment-options">
-                            <label class="payment-option azampay-option">
-                                <input type="radio" name="payment_method" value="azampay" checked>
-                                <div class="payment-card">
-                                    <div class="payment-icon">
-                                        <i class="fas fa-mobile-alt"></i>
+                            <?php if ($azampay_enabled) : ?>
+                                <label class="payment-option azampay-option">
+                                    <input type="radio" name="payment_method" value="azampay" <?php checked($default_payment_method, 'azampay'); ?>>
+                                    <div class="payment-card">
+                                        <div class="payment-icon">
+                                            <i class="fas fa-mobile-alt"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong><?php _e('AzamPay', 'kilismile'); ?></strong>
+                                            <small><?php _e('Mobile Money', 'kilismile'); ?></small>
+                                        </div>
+                                        <div class="payment-badge"><?php _e('Local', 'kilismile'); ?></div>
                                     </div>
-                                    <div class="payment-info">
-                                        <strong><?php _e('AzamPay', 'kilismile'); ?></strong>
-                                        <small><?php _e('Mobile Money', 'kilismile'); ?></small>
-                                    </div>
-                                    <div class="payment-badge"><?php _e('Local', 'kilismile'); ?></div>
-                                </div>
-                            </label>
+                                </label>
+                            <?php endif; ?>
 
-                            <label class="payment-option paypal-option">
-                                <input type="radio" name="payment_method" value="paypal">
-                                <div class="payment-card">
-                                    <div class="payment-icon">
-                                        <i class="fab fa-paypal"></i>
+                            <?php if ($paypal_enabled) : ?>
+                                <label class="payment-option paypal-option">
+                                    <input type="radio" name="payment_method" value="paypal" <?php checked($default_payment_method, 'paypal'); ?>>
+                                    <div class="payment-card">
+                                        <div class="payment-icon">
+                                            <i class="fab fa-paypal"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong><?php _e('PayPal', 'kilismile'); ?></strong>
+                                            <small><?php _e('Credit Card, PayPal Balance', 'kilismile'); ?></small>
+                                        </div>
+                                        <div class="payment-badge"><?php _e('Global', 'kilismile'); ?></div>
                                     </div>
-                                    <div class="payment-info">
-                                        <strong><?php _e('PayPal', 'kilismile'); ?></strong>
-                                        <small><?php _e('Credit Card, PayPal Balance', 'kilismile'); ?></small>
-                                    </div>
-                                    <div class="payment-badge"><?php _e('Global', 'kilismile'); ?></div>
-                                </div>
-                            </label>
+                                </label>
+                            <?php endif; ?>
 
-                            <label class="payment-option manual-option">
-                                <input type="radio" name="payment_method" value="manual_transfer">
-                                <div class="payment-card">
-                                    <div class="payment-icon">
-                                        <i class="fas fa-university"></i>
+                            <?php if ($manual_enabled) : ?>
+                                <label class="payment-option manual-option">
+                                    <input type="radio" name="payment_method" value="manual_transfer" <?php checked($default_payment_method, 'manual_transfer'); ?>>
+                                    <div class="payment-card">
+                                        <div class="payment-icon">
+                                            <i class="fas fa-university"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong><?php _e('Manual Transfer', 'kilismile'); ?></strong>
+                                            <small><?php _e('Bank Transfer (Offline)', 'kilismile'); ?></small>
+                                        </div>
+                                        <div class="payment-badge"><?php _e('Offline', 'kilismile'); ?></div>
                                     </div>
-                                    <div class="payment-info">
-                                        <strong><?php _e('Manual Transfer', 'kilismile'); ?></strong>
-                                        <small><?php _e('Bank Transfer (Offline)', 'kilismile'); ?></small>
-                                    </div>
-                                    <div class="payment-badge"><?php _e('Offline', 'kilismile'); ?></div>
-                                </div>
-                            </label>
+                                </label>
+                            <?php endif; ?>
                         </div>
+                        <?php if (empty($default_payment_method)) : ?>
+                            <div class="payment-disabled" style="margin-top: 10px; color: #b91c1c; font-size: 0.95rem;">
+                                <?php _e('All payment gateways are currently disabled. Please contact the site administrator.', 'kilismile'); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Terms and Conditions -->
@@ -284,7 +308,7 @@ echo '</div>';
                         <i class="fas fa-arrow-left"></i>
                         <?php _e('Back', 'kilismile'); ?>
                     </button>
-                    <button type="submit" class="btn btn-success btn-donate">
+                    <button type="submit" class="btn btn-success btn-donate" <?php echo empty($default_payment_method) ? 'disabled style="opacity:0.6;cursor:not-allowed;"' : ''; ?>>
                         <i class="fas fa-heart"></i>
                         <?php _e('Complete Donation', 'kilismile'); ?>
                     </button>
@@ -1949,6 +1973,32 @@ jQuery(document).ready(function($) {
                                 ${instructions.map(instruction => `<li>${instruction}</li>`).join('')}
                             </ol>
                         </div>` : ''}
+
+                        <div style="background: #f1f8ff; border: 2px solid #d6e8ff; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+                            <h4 style="color: #1f5f99; margin-bottom: 12px;">
+                                <i class="fas fa-receipt" style="margin-right: 8px;"></i>Submit Payment Proof
+                            </h4>
+                            <p style="color: #4a6b8a; font-size: 0.9rem; margin-bottom: 12px;">
+                                Enter your bank/mobile money transaction reference and optionally upload your receipt for faster verification.
+                            </p>
+                            <div style="display: grid; gap: 10px;">
+                                <input type="text" name="receipt_reference" placeholder="Transaction reference / receipt ID" style="padding: 10px 12px; border-radius: 8px; border: 1px solid #cfe0f2; font-size: 0.95rem;">
+                                <input type="file" name="receipt_file" accept=".jpg,.jpeg,.png,.pdf" style="padding: 6px;">
+                                <button class="btn submit-receipt-btn" style="
+                                    background: #1f5f99;
+                                    color: white;
+                                    border: none;
+                                    padding: 10px 16px;
+                                    border-radius: 8px;
+                                    cursor: pointer;
+                                    font-weight: 600;
+                                    width: fit-content;
+                                ">
+                                    <i class="fas fa-upload" style="margin-right: 8px;"></i>Submit Proof
+                                </button>
+                                <div class="receipt-upload-status" style="font-size: 0.9rem; color: #1f5f99;"></div>
+                            </div>
+                        </div>
                         
                         <div style="background: #e8f5e9; border: 2px solid #a5d6a7; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
                             <p style="color: #2d5a41; font-size: 0.9rem; margin: 0;">
@@ -1989,6 +2039,54 @@ jQuery(document).ready(function($) {
             `);
             
             $('body').append($modal);
+
+            // Submit receipt proof
+            $modal.find('.submit-receipt-btn').on('click', function(e) {
+                e.preventDefault();
+
+                const reference = $modal.find('input[name="receipt_reference"]').val().trim();
+                const fileInput = $modal.find('input[name="receipt_file"]')[0];
+                const $status = $modal.find('.receipt-upload-status');
+
+                if (!reference) {
+                    $status.css('color', '#b42318').text('Please enter your transaction reference.');
+                    return;
+                }
+
+                const ajaxUrl = (window.kilismile_ajax && window.kilismile_ajax.ajax_url)
+                    ? window.kilismile_ajax.ajax_url
+                    : '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+
+                const formData = new FormData();
+                formData.append('action', 'kilismile_submit_manual_receipt');
+                formData.append('nonce', '<?php echo wp_create_nonce('kilismile_manual_receipt'); ?>');
+                formData.append('donation_id', data.transaction_id || '');
+                formData.append('receipt_reference', reference);
+
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    formData.append('receipt_file', fileInput.files[0]);
+                }
+
+                $status.css('color', '#1f5f99').text('Submitting receipt...');
+
+                $.ajax({
+                    url: ajaxUrl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response && response.success) {
+                            $status.css('color', '#1f7a3a').text(response.data.message || 'Receipt submitted successfully.');
+                        } else {
+                            $status.css('color', '#b42318').text(response.data?.message || 'Receipt submission failed.');
+                        }
+                    },
+                    error: function() {
+                        $status.css('color', '#b42318').text('Receipt submission failed. Please try again.');
+                    }
+                });
+            });
             
             // Print instructions
             $modal.find('.print-instructions-btn').on('click', function() {

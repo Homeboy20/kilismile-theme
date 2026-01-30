@@ -396,88 +396,122 @@ get_header(); ?>
     </section>
 
     <!-- Programs Showcase -->
-    <section class="programs-showcase" style="padding: 60px 0; background: white;">
+    <section class="programs-showcase" style="padding: 80px 0; background: linear-gradient(135deg, #f8fdf9 0%, #ffffff 100%);">
         <div class="container">
-            <div class="section-header" style="text-align: center; margin-bottom: 40px;">
-                <h2 style="font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 15px; color: var(--dark-green); font-weight: 600; line-height: 1.3;">
-                    Our Health Programs
+            <div class="section-header" style="text-align: center; margin-bottom: 50px;">
+                <span style="display: inline-block; padding: 6px 16px; background: rgba(76, 175, 80, 0.1); color: var(--primary-green); border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
+                    Our Programs
+                </span>
+                <h2 style="font-size: clamp(2rem, 4vw, 2.5rem); margin: 0 0 18px; color: var(--dark-green); font-weight: 700; line-height: 1.2;">
+                    Transforming Lives Through Health
                 </h2>
-                <p style="font-size: 1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.5;">
-                    From education to screening, our integrated approach addresses the full spectrum of community health needs.
+                <p style="font-size: 1.05rem; color: var(--text-secondary); max-width: 650px; margin: 0 auto; line-height: 1.7;">
+                    Empowering communities with accessible health education, preventive care, and sustainable wellness programs.
                 </p>
             </div>
 
-            <div class="programs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <?php
-                $programs = new WP_Query(array(
-                    'post_type' => 'programs',
-                    'posts_per_page' => 3,
-                    'post_status' => 'publish'
-                ));
+            <div class="programs-carousel-wrapper" style="position: relative; max-width: 1400px; margin: 0 auto;">
+                <button class="carousel-nav prev-btn" style="position: absolute; left: -60px; top: 50%; transform: translateY(-50%); background: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='var(--primary-green)'; this.querySelector('i').style.color='white';" onmouseout="this.style.background='white'; this.querySelector('i').style.color='var(--primary-green)';">
+                    <i class="fas fa-chevron-left" style="font-size: 1.2rem; color: var(--primary-green); transition: color 0.3s ease;"></i>
+                </button>
+                
+                <div class="programs-carousel" style="overflow: hidden; padding: 0 10px;">
+                    <div class="programs-track" style="display: flex; gap: 25px; transition: transform 0.5s ease;">
+                        <?php
+                        $programs = new WP_Query(array(
+                            'post_type' => 'programs',
+                            'posts_per_page' => -1,
+                            'post_status' => 'publish'
+                        ));
                 
                 if ($programs->have_posts()) :
-                    $program_icons = ['fas fa-tooth', 'fas fa-chalkboard-teacher', 'fas fa-stethoscope'];
-                    $program_colors = ['var(--primary-green)', 'var(--accent-green)', 'var(--light-green)'];
+                    $program_icons = ['fas fa-tooth', 'fas fa-chalkboard-teacher', 'fas fa-hands-helping', 'fas fa-heartbeat'];
+                    $program_colors = ['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7'];
                     $icon_index = 0;
                     
                     while ($programs->have_posts()) : $programs->the_post();
                         $target_audience = get_post_meta(get_the_ID(), '_program_target_audience', true);
                         $status = get_post_meta(get_the_ID(), '_program_status', true);
                         $beneficiaries = get_post_meta(get_the_ID(), '_program_beneficiaries', true);
-                        $current_icon = $program_icons[$icon_index % 3];
-                        $current_color = $program_colors[$icon_index % 3];
+                        $current_icon = $program_icons[$icon_index % 4];
+                        $current_color = $program_colors[$icon_index % 4];
                 ?>
-                <div class="program-card-redesign" style="background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); position: relative; border: 1px solid rgba(76, 175, 80, 0.1);">
-                    <?php if (has_post_thumbnail()) : ?>
-                        <div class="program-image-container" style="height: 180px; position: relative; overflow: hidden;">
-                            <?php the_post_thumbnail('medium', array('style' => 'width: 100%; height: 100%; object-fit: cover;')); ?>
-                            <?php if ($status) : ?>
-                                <div style="position: absolute; top: 10px; left: 10px; background: <?php echo $current_color; ?>; color: white; padding: 4px 10px; border-radius: 2px; font-size: 0.75rem; font-weight: 500; text-transform: uppercase;">
-                                    <?php echo esc_html($status); ?>
+                <div class="program-card-modern" style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); position: relative; transition: all 0.3s ease; border: 1px solid rgba(0,0,0,0.04); flex: 0 0 calc(25% - 19px); min-width: 300px;">
+                    <style>
+                        .program-card-modern:hover {
+                            transform: translateY(-8px);
+                            box-shadow: 0 12px 35px rgba(76, 175, 80, 0.15);
+                        }
+                        .program-card-modern .program-link:hover h3 {
+                            color: <?php echo $current_color; ?>;
+                        }
+                        .program-card-modern .learn-more-btn:hover {
+                            background: <?php echo $current_color; ?>;
+                            transform: translateX(5px);
+                        }
+                    </style>
+                    
+                    <div class="program-image-wrapper" style="position: relative; height: 220px; overflow: hidden; background: linear-gradient(135deg, <?php echo $current_color; ?>22 0%, <?php echo $current_color; ?>11 100%);">
+                        <?php if (has_post_thumbnail()) : ?>
+                            <?php the_post_thumbnail('medium', array('style' => 'width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;')); ?>
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 100%);"></div>
+                        <?php else : ?>
+                            <div style="height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;">
+                                <div style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                    <i class="<?php echo $current_icon; ?>" style="font-size: 2.2rem; color: <?php echo $current_color; ?>;"></i>
                                 </div>
-                            <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($status) : ?>
+                            <div style="position: absolute; top: 16px; left: 16px; background: <?php echo $current_color; ?>; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                <?php echo esc_html($status); ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div style="position: absolute; bottom: 16px; right: 16px; width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 12px rgba(0,0,0,0.15);">
+                            <i class="<?php echo $current_icon; ?>" style="font-size: 1.3rem; color: <?php echo $current_color; ?>;"></i>
                         </div>
-                    <?php else : ?>
-                        <div style="height: 180px; background: rgba(76, 175, 80, 0.05); display: flex; align-items: center; justify-content: center;">
-                            <i class="<?php echo $current_icon; ?>" style="font-size: 3rem; color: <?php echo $current_color; ?>; opacity: 0.5;"></i>
-                        </div>
-                    <?php endif; ?>
+                    </div>
 
-                    <div class="program-content" style="padding: 20px;">
-                        <h3 style="font-size: 1.2rem; margin: 0 0 10px; font-weight: 600; color: var(--text-primary);">
-                            <a href="<?php the_permalink(); ?>" style="text-decoration: none; color: inherit;">
+                    <div class="program-content" style="padding: 28px 24px;">
+                        <h3 style="font-size: 1.35rem; margin: 0 0 12px; font-weight: 700; color: var(--dark-green); line-height: 1.3; transition: color 0.3s ease;">
+                            <a href="<?php the_permalink(); ?>" class="program-link" style="text-decoration: none; color: inherit;">
                                 <?php the_title(); ?>
                             </a>
                         </h3>
-                        <div class="program-excerpt" style="color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5; font-size: 0.9rem;">
-                            <?php echo wp_trim_words(get_the_excerpt(), 20); ?>
+                        
+                        <div class="program-excerpt" style="color: #666; margin-bottom: 20px; line-height: 1.6; font-size: 0.95rem;">
+                            <?php echo wp_trim_words(get_the_excerpt(), 18); ?>
                         </div>
                         
-                        <div class="program-meta" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; font-size: 0.85rem;">
+                        <?php if ($target_audience || $beneficiaries) : ?>
+                        <div class="program-meta" style="display: flex; gap: 20px; margin-bottom: 20px; padding: 16px; background: rgba(76, 175, 80, 0.04); border-radius: 10px; border-left: 3px solid <?php echo $current_color; ?>;">
                             <?php if ($target_audience) : ?>
-                            <div class="meta-item" style="display: flex; align-items: flex-start; gap: 8px;">
-                                <i class="fas fa-users" style="color: <?php echo $current_color; ?>; width: 16px; margin-top: 2px;"></i>
-                                <div>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1px;">Target Group</div>
-                                    <div style="font-weight: 600; color: var(--text-primary);"><?php echo esc_html($target_audience); ?></div>
+                            <div class="meta-item" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <i class="fas fa-users" style="color: <?php echo $current_color; ?>; font-size: 0.9rem;"></i>
+                                    <div style="font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">Target</div>
                                 </div>
+                                <div style="font-weight: 600; color: var(--dark-green); font-size: 0.9rem;"><?php echo esc_html($target_audience); ?></div>
                             </div>
                             <?php endif; ?>
                             
                             <?php if ($beneficiaries) : ?>
-                            <div class="meta-item" style="display: flex; align-items: flex-start; gap: 8px;">
-                                <i class="fas fa-heart" style="color: <?php echo $current_color; ?>; width: 16px; margin-top: 2px;"></i>
-                                <div>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1px;">Beneficiaries</div>
-                                    <div style="font-weight: 600; color: var(--text-primary);"><?php echo esc_html($beneficiaries); ?></div>
+                            <div class="meta-item" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <i class="fas fa-heart" style="color: <?php echo $current_color; ?>; font-size: 0.9rem;"></i>
+                                    <div style="font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">Impact</div>
                                 </div>
+                                <div style="font-weight: 600; color: var(--dark-green); font-size: 0.9rem;"><?php echo esc_html($beneficiaries); ?></div>
                             </div>
                             <?php endif; ?>
                         </div>
+                        <?php endif; ?>
                         
-                        <a href="<?php the_permalink(); ?>" class="program-button" style="display: inline-flex; align-items: center; padding: 8px 16px; background: <?php echo $current_color; ?>; color: white; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 0.9rem; transition: all 0.3s ease; gap: 6px;">
+                        <a href="<?php the_permalink(); ?>" class="learn-more-btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: transparent; color: <?php echo $current_color; ?>; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; border: 2px solid <?php echo $current_color; ?>;">
                             Learn More
-                            <i class="fas fa-arrow-right" style="font-size: 0.7rem;"></i>
+                            <i class="fas fa-arrow-right" style="font-size: 0.8rem; transition: transform 0.3s ease;"></i>
                         </a>
                     </div>
                 </div>
@@ -487,21 +521,198 @@ get_header(); ?>
                     wp_reset_postdata();
                 else :
                 ?>
-                <div class="no-programs" style="grid-column: 1 / -1; text-align: center; padding: 30px 20px; background: rgba(76, 175, 80, 0.05); border-radius: 4px;">
-                    <i class="fas fa-seedling" style="font-size: 2rem; color: var(--primary-green); margin-bottom: 15px; opacity: 0.7;"></i>
-                    <h3 style="color: var(--dark-green); margin-bottom: 8px; font-size: 1.2rem;">Programs Coming Soon</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.9rem;">We're developing comprehensive programs to serve our communities better.</p>
+                <div class="no-programs" style="flex: 0 0 100%; text-align: center; padding: 60px 30px; background: white; border-radius: 16px; border: 2px dashed rgba(76, 175, 80, 0.2);">
+                    <div style="width: 100px; height: 100px; background: rgba(76, 175, 80, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-seedling" style="font-size: 3rem; color: var(--primary-green);"></i>
+                    </div>
+                    <h3 style="color: var(--dark-green); margin-bottom: 12px; font-size: 1.5rem; font-weight: 700;">Programs Coming Soon</h3>
+                    <p style="color: var(--text-secondary); font-size: 1rem; max-width: 500px; margin: 0 auto;">We're developing comprehensive health programs to serve our communities better. Stay tuned!</p>
                 </div>
                 <?php endif; ?>
+                    </div>
+                </div>
+                
+                <button class="carousel-nav next-btn" style="position: absolute; right: -60px; top: 50%; transform: translateY(-50%); background: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='var(--primary-green)'; this.querySelector('i').style.color='white';" onmouseout="this.style.background='white'; this.querySelector('i').style.color='var(--primary-green)';">
+                    <i class="fas fa-chevron-right" style="font-size: 1.2rem; color: var(--primary-green); transition: color 0.3s ease;"></i>
+                </button>
+            </div>
+            
+            <div class="carousel-dots" style="display: flex; justify-content: center; gap: 8px; margin-top: 40px;">
+                <!-- Dots will be dynamically generated by JavaScript -->
             </div>
 
-            <div style="text-align: center; margin-top: 40px;">
-                <a href="<?php echo esc_url(home_url('/programs')); ?>" style="display: inline-flex; align-items: center; gap: 8px; background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">
-                    <i class="fas fa-th-large" style="font-size: 0.9rem;"></i>
-                    Explore All Programs
+            <div style="text-align: center; margin-top: 50px;">
+                <a href="<?php echo esc_url(home_url('/programs')); ?>" style="display: inline-flex; align-items: center; gap: 10px; background: var(--primary-green); color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+                    View All Programs
+                    <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i>
                 </a>
             </div>
         </div>
+        
+        <style>
+            .program-card-modern:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 12px 35px rgba(76, 175, 80, 0.15);
+            }
+            .program-card-modern .program-link:hover h3 {
+                color: var(--primary-green);
+            }
+            .program-card-modern .learn-more-btn:hover {
+                background: var(--primary-green);
+                transform: translateX(5px);
+            }
+            .program-card-modern:hover .program-image-wrapper img {
+                transform: scale(1.05);
+            }
+            
+            @media (max-width: 1200px) {
+                .programs-showcase {
+                    padding: 50px 0 !important;
+                }
+                .carousel-nav {
+                    display: none !important;
+                }
+                .program-card-modern {
+                    flex: 0 0 calc(33.333% - 17px) !important;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .program-card-modern {
+                    flex: 0 0 calc(100% - 20px) !important;
+                    min-width: 280px !important;
+                }
+                .programs-carousel {
+                    padding: 0 5px !important;
+                }
+            }
+        </style>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const track = document.querySelector('.programs-track');
+                const prevBtn = document.querySelector('.prev-btn');
+                const nextBtn = document.querySelector('.next-btn');
+                const dotsContainer = document.querySelector('.carousel-dots');
+                
+                if (!track) return;
+                
+                const cards = track.querySelectorAll('.program-card-modern');
+                const totalCards = cards.length;
+                
+                if (totalCards === 0) return;
+                
+                let currentIndex = 0;
+                const cardsToShow = window.innerWidth > 1200 ? 4 : window.innerWidth > 768 ? 3 : 1;
+                const totalSlides = Math.max(1, Math.ceil(totalCards - cardsToShow + 1));
+                
+                // Create dots
+                for (let i = 0; i < totalSlides; i++) {
+                    const dot = document.createElement('button');
+                    dot.style.cssText = 'width: 10px; height: 10px; border-radius: 50%; border: none; background: rgba(76, 175, 80, 0.3); cursor: pointer; transition: all 0.3s ease; padding: 0;';
+                    dot.onclick = () => goToSlide(i);
+                    dotsContainer.appendChild(dot);
+                }
+                
+                function updateCarousel() {
+                    const cardWidth = cards[0].offsetWidth;
+                    const gap = 25;
+                    const offset = currentIndex * (cardWidth + gap);
+                    track.style.transform = `translateX(-${offset}px)`;
+                    
+                    // Update dots
+                    const dots = dotsContainer.querySelectorAll('button');
+                    dots.forEach((dot, index) => {
+                        if (index === currentIndex) {
+                            dot.style.background = 'var(--primary-green)';
+                            dot.style.width = '30px';
+                        } else {
+                            dot.style.background = 'rgba(76, 175, 80, 0.3)';
+                            dot.style.width = '10px';
+                        }
+                    });
+                    
+                    // Update button states
+                    if (prevBtn && nextBtn) {
+                        prevBtn.style.opacity = currentIndex === 0 ? '0.3' : '1';
+                        prevBtn.style.cursor = currentIndex === 0 ? 'not-allowed' : 'pointer';
+                        nextBtn.style.opacity = currentIndex >= totalSlides - 1 ? '0.3' : '1';
+                        nextBtn.style.cursor = currentIndex >= totalSlides - 1 ? 'not-allowed' : 'pointer';
+                    }
+                }
+                
+                function goToSlide(index) {
+                    currentIndex = Math.max(0, Math.min(index, totalSlides - 1));
+                    updateCarousel();
+                }
+                
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', () => {
+                        if (currentIndex > 0) {
+                            currentIndex--;
+                            updateCarousel();
+                        }
+                    });
+                }
+                
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', () => {
+                        if (currentIndex < totalSlides - 1) {
+                            currentIndex++;
+                            updateCarousel();
+                        }
+                    });
+                }
+                
+                // Touch support for mobile
+                let touchStartX = 0;
+                let touchEndX = 0;
+                
+                track.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                });
+                
+                track.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                });
+                
+                function handleSwipe() {
+                    if (touchEndX < touchStartX - 50 && currentIndex < totalSlides - 1) {
+                        currentIndex++;
+                        updateCarousel();
+                    }
+                    if (touchEndX > touchStartX + 50 && currentIndex > 0) {
+                        currentIndex--;
+                        updateCarousel();
+                    }
+                }
+                
+                // Keyboard navigation
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                        currentIndex--;
+                        updateCarousel();
+                    }
+                    if (e.key === 'ArrowRight' && currentIndex < totalSlides - 1) {
+                        currentIndex++;
+                        updateCarousel();
+                    }
+                });
+                
+                // Initialize
+                updateCarousel();
+                
+                // Handle window resize
+                let resizeTimer;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                });
+            });
+        </script>
     </section>
 
     <!-- News & Updates Section -->

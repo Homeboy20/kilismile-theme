@@ -31,6 +31,19 @@
                 const donationId = $(e.currentTarget).data('id');
                 this.viewDonationDetails(donationId);
             });
+
+            // Verify manual receipt
+            $(document).on('click', '.verify-receipt', (e) => {
+                e.preventDefault();
+                const donationId = $(e.currentTarget).data('donation-id');
+                if (!donationId) {
+                    this.showNotice('Missing donation reference.', 'error');
+                    return;
+                }
+                if (confirm('Mark this manual transfer as completed?')) {
+                    this.verifyManualReceipt(donationId);
+                }
+            });
             
             // Status update dropdown
             $(document).on('change', '.status-update', (e) => {
@@ -75,6 +88,10 @@
         }
         
         showDonationModal(donation) {
+            const isManual = ['manual_transfer', 'bank_transfer'].includes((donation.payment_method || '').toLowerCase());
+            const receiptRef = donation.receipt_reference || '';
+            const receiptUrl = donation.receipt_url || '';
+
             const modalHtml = `
                 <div id="donation-modal" class="donation-modal-overlay">
                     <div class="donation-modal">
@@ -119,10 +136,21 @@
                                     <p>${donation.message}</p>
                                 </div>
                             ` : ''}
+
+                            ${isManual && receiptRef ? `
+                                <div class="detail-section">
+                                    <h4>Manual Receipt</h4>
+                                    <p><strong>Reference:</strong> ${receiptRef}</p>
+                                    ${receiptUrl ? `<p><a href="${receiptUrl}" target="_blank" rel="noopener noreferrer">View Receipt</a></p>` : ''}
+                                </div>
+                            ` : ''}
                             
                             <div class="donation-actions">
                                 <button class="button button-primary send-receipt" data-id="${donation.id}">Send Receipt</button>
                                 <button class="button button-secondary refund-donation" data-id="${donation.id}">Process Refund</button>
+                                ${isManual && receiptRef && (donation.status === 'pending' || donation.status === 'pending_verification') ? `
+                                    <button class="button button-primary verify-receipt-modal" data-donation-id="${donation.donation_id}">Verify Receipt</button>
+                                ` : ''}
                                 <select class="status-change" data-id="${donation.id}">
                                     <option value="">Change Status</option>
                                     <option value="pending" ${donation.status === 'pending' ? 'disabled' : ''}>Pending</option>
@@ -162,6 +190,18 @@
                     this.updateDonationStatus(donationId, newStatus);
                 }
             });
+
+            $('.verify-receipt-modal').on('click', (e) => {
+                const donationId = $(e.currentTarget).data('donation-id');
+                if (!donationId) {
+                    this.showNotice('Missing donation reference.', 'error');
+                    return;
+                }
+                if (confirm('Mark this manual transfer as completed?')) {
+                    this.verifyManualReceipt(donationId);
+                    this.closeDonationModal();
+                }
+            });
         }
         
         closeDonationModal() {
@@ -179,7 +219,7 @@
                 
                 if (response.success) {
                     this.showNotice('Donation status updated successfully.', 'success');
-                    this.refreshDonationsTable();
+                    this.applyStatusUpdate(donationId, newStatus);
                     this.closeDonationModal();
                 } else {
                     this.showNotice('Failed to update donation status.', 'error');
@@ -187,6 +227,24 @@
             } catch (error) {
                 console.error('Error updating status:', error);
                 this.showNotice('Error updating donation status.', 'error');
+            }
+        }
+
+        async verifyManualReceipt(donationId) {
+            try {
+                const response = await this.makeAjaxRequest('verify_manual_receipt', {
+                    donation_id: donationId
+                });
+
+                if (response.success) {
+                    this.showNotice(response.data?.message || 'Receipt verified successfully.', 'success');
+                    this.applyStatusUpdateByDonationRef(donationId, 'completed');
+                } else {
+                    this.showNotice(response.data?.message || 'Failed to verify receipt.', 'error');
+                }
+            } catch (error) {
+                console.error('Error verifying receipt:', error);
+                this.showNotice('Error verifying receipt.', 'error');
             }
         }
         
@@ -219,7 +277,7 @@
                 
                 if (response.success) {
                     this.showNotice('Refund processed successfully.', 'success');
-                    this.refreshDonationsTable();
+                    this.applyStatusUpdate(donationId, 'refunded');
                     this.closeDonationModal();
                 } else {
                     this.showNotice('Failed to process refund: ' + response.message, 'error');
@@ -259,6 +317,37 @@
                     }
                 });
             });
+        }
+
+        applyStatusUpdate(donationId, newStatus) {
+            const $row = $(`.status-update[data-id="${donationId}"]`).closest('tr');
+            if (!$row.length) return;
+
+            const $badge = $row.find('.status-badge');
+            if ($badge.length) {
+                $badge.attr('class', `status-badge status-${newStatus}`);
+                $badge.text(newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
+            }
+
+            const $select = $row.find('.status-update');
+            if ($select.length) {
+                $select.val('');
+            }
+
+            const $modalBadge = $('#donation-modal .status-badge');
+            if ($modalBadge.length) {
+                $modalBadge.attr('class', `status-badge status-${newStatus}`);
+                $modalBadge.text(newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
+            }
+        }
+
+        applyStatusUpdateByDonationRef(donationRef, newStatus) {
+            const $row = $(`.verify-receipt[data-donation-id="${donationRef}"]`).closest('tr');
+            if (!$row.length) return;
+            const donationId = $row.find('.status-update').data('id');
+            if (donationId) {
+                this.applyStatusUpdate(donationId, newStatus);
+            }
         }
         
         initializeCharts() {

@@ -31,6 +31,60 @@ get_header(); ?>
                 $amount = isset($_GET['amount']) ? sanitize_text_field($_GET['amount']) : '';
                 $currency = isset($_GET['currency']) ? sanitize_text_field($_GET['currency']) : 'TZS';
                 $donor_name = isset($_GET['donor']) ? sanitize_text_field($_GET['donor']) : '';
+                $verify_mode = isset($_GET['verify']) && $_GET['verify'] === '1';
+                $donation = null;
+                $receipt_reference = '';
+                $receipt_url = '';
+                $receipt_submitted_at = '';
+                $receipt_verified_at = '';
+                $verification_status = '';
+                $verification_message = '';
+                $show_verification_section = false;
+                $verification_url = '';
+                $is_manual_transfer = false;
+
+                if ($donation_id && class_exists('KiliSmile_Donation_Database')) {
+                    $db = new KiliSmile_Donation_Database();
+                    $donation = $db->get_donation($donation_id);
+                    if (!empty($donation)) {
+                        $receipt_reference = $db->get_donation_meta($donation_id, 'manual_receipt_reference');
+                        $receipt_url = $db->get_donation_meta($donation_id, 'manual_receipt_file_url');
+                        $receipt_submitted_at = $db->get_donation_meta($donation_id, 'manual_receipt_submitted_at');
+                        $receipt_verified_at = $db->get_donation_meta($donation_id, 'manual_receipt_verified_at');
+
+                        $is_manual_transfer = in_array($donation['payment_method'] ?? '', array('manual_transfer', 'bank_transfer'), true);
+                        $show_verification_section = $is_manual_transfer || $verify_mode;
+
+                        if (!empty($receipt_verified_at) || ($donation['status'] ?? '') === 'completed') {
+                            $verification_status = __('Verified', 'kilismile');
+                            $verification_message = __('Your transfer has been verified. Thank you!', 'kilismile');
+                        } elseif (!empty($receipt_reference) || !empty($receipt_submitted_at) || !empty($receipt_url)) {
+                            $verification_status = __('Under Review', 'kilismile');
+                            $verification_message = __('We received your receipt and are verifying it now.', 'kilismile');
+                        } elseif (($donation['status'] ?? '') === 'pending_verification' || ($donation['status'] ?? '') === 'pending') {
+                            $verification_status = __('Awaiting Receipt', 'kilismile');
+                            $verification_message = __('Please submit your transfer reference or receipt to complete verification.', 'kilismile');
+                        } else {
+                            $verification_status = __('Processing', 'kilismile');
+                            $verification_message = __('We are processing your donation details.', 'kilismile');
+                        }
+                    } else {
+                        $show_verification_section = $verify_mode;
+                        $verification_status = __('Not Found', 'kilismile');
+                        $verification_message = __('We could not find this donation. Please check your Donation ID.', 'kilismile');
+                    }
+                } elseif ($verify_mode) {
+                    $show_verification_section = true;
+                    $verification_status = __('Missing Donation ID', 'kilismile');
+                    $verification_message = __('Please open the link with your Donation ID so we can verify your transfer.', 'kilismile');
+                }
+
+                if ($donation_id && $is_manual_transfer) {
+                    $verification_url = add_query_arg(
+                        array('donation_id' => $donation_id, 'verify' => '1'),
+                        get_permalink()
+                    ) . '#manual-verification';
+                }
                 
                 if ($donation_id || $amount) :
                 ?>
@@ -63,6 +117,113 @@ get_header(); ?>
             </div>
         </div>
     </section>
+
+    <?php if ($show_verification_section) : ?>
+    <section id="manual-verification" class="verification-section" style="padding: 60px 0; background: #f5f7fb;">
+        <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 0 20px;">
+            <div style="text-align: center; margin-bottom: 35px;">
+                <h2 style="color: var(--dark-green); font-size: 1.9rem; margin-bottom: 10px; font-weight: 600;">
+                    <?php _e('Verify Your Transfer', 'kilismile'); ?>
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 1rem; margin: 0 auto; max-width: 700px; line-height: 1.6;">
+                    <?php _e('If you completed a manual bank/mobile transfer, submit your receipt to speed up verification. You can scan the QR code with your phone if you paid on a PC.', 'kilismile'); ?>
+                </p>
+            </div>
+
+            <div class="verification-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; align-items: stretch;">
+                <div class="verification-card" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6ebf5;">
+                    <h3 style="margin: 0 0 12px; color: var(--dark-green); font-size: 1.2rem;">
+                        <?php _e('Verification Status', 'kilismile'); ?>
+                    </h3>
+                    <div class="verification-status" style="display: inline-flex; align-items: center; gap: 8px; background: #eef6ff; color: #1d4ed8; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 0.9rem; margin-bottom: 12px;">
+                        <i class="fas fa-shield-check"></i>
+                        <?php echo esc_html($verification_status); ?>
+                    </div>
+                    <p style="margin: 0 0 15px; color: var(--text-secondary); line-height: 1.6;">
+                        <?php echo esc_html($verification_message); ?>
+                    </p>
+
+                    <?php if ($donation_id) : ?>
+                        <div style="background: #f7f9fc; padding: 12px; border-radius: 8px; border: 1px dashed #c9d6ee; font-size: 0.95rem;">
+                            <strong><?php _e('Donation ID:', 'kilismile'); ?></strong>
+                            <span><?php echo esc_html($donation_id); ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($receipt_reference)) : ?>
+                        <div style="margin-top: 12px; font-size: 0.9rem; color: var(--text-secondary);">
+                            <strong><?php _e('Receipt Reference:', 'kilismile'); ?></strong>
+                            <?php echo esc_html($receipt_reference); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($receipt_url)) : ?>
+                        <div style="margin-top: 8px;">
+                            <a href="<?php echo esc_url($receipt_url); ?>" target="_blank" style="color: var(--primary-green); font-weight: 600;">
+                                <?php _e('View submitted receipt', 'kilismile'); ?>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="verification-card" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6ebf5;">
+                    <h3 style="margin: 0 0 12px; color: var(--dark-green); font-size: 1.2rem;">
+                        <?php _e('Scan to Upload Receipt', 'kilismile'); ?>
+                    </h3>
+                    <?php if (!empty($verification_url)) : ?>
+                        <div class="qr-box" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <img src="<?php echo esc_url('https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($verification_url)); ?>" alt="<?php esc_attr_e('Verification QR Code', 'kilismile'); ?>" style="width: 220px; height: 220px; border-radius: 12px; border: 1px solid #e6ebf5;">
+                            <a href="<?php echo esc_url($verification_url); ?>" class="btn btn-primary" style="padding: 10px 18px; background: var(--primary-green); color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                                <?php _e('Open Verification Form', 'kilismile'); ?>
+                            </a>
+                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+                                <?php _e('Scan with your phone camera to upload the receipt quickly.', 'kilismile'); ?>
+                            </p>
+                        </div>
+                    <?php elseif ($donation_id && !$is_manual_transfer) : ?>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            <?php _e('This payment method does not require manual verification.', 'kilismile'); ?>
+                        </p>
+                    <?php else : ?>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            <?php _e('Verification link will appear once your Donation ID is available.', 'kilismile'); ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="verification-card" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6ebf5;">
+                    <h3 style="margin: 0 0 12px; color: var(--dark-green); font-size: 1.2rem;">
+                        <?php _e('Submit Receipt', 'kilismile'); ?>
+                    </h3>
+                    <?php if ($donation_id && $is_manual_transfer) : ?>
+                        <form id="manual-receipt-form" enctype="multipart/form-data">
+                            <input type="hidden" name="donation_id" value="<?php echo esc_attr($donation_id); ?>">
+                            <div style="display: grid; gap: 12px;">
+                                <input type="text" name="receipt_reference" placeholder="<?php esc_attr_e('Transaction reference / receipt ID', 'kilismile'); ?>" required style="padding: 10px 12px; border-radius: 8px; border: 1px solid #cfe0f2; font-size: 0.95rem;">
+                                <input type="file" name="receipt_file" accept=".jpg,.jpeg,.png,.pdf" style="padding: 6px;">
+                                <button type="submit" class="btn btn-primary" style="padding: 10px 16px; background: var(--primary-green); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                                    <?php _e('Submit Receipt', 'kilismile'); ?>
+                                </button>
+                                <div class="receipt-upload-status" style="font-size: 0.9rem; color: #1f5f99;"></div>
+                            </div>
+                        </form>
+                        <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-secondary);">
+                            <?php _e('We accept JPG, PNG, or PDF files up to 5MB.', 'kilismile'); ?>
+                        </p>
+                    <?php elseif ($donation_id) : ?>
+                        <p style="margin: 0; color: var(--text-secondary);">
+                            <?php _e('Receipt submission is only needed for manual transfers.', 'kilismile'); ?>
+                        </p>
+                    <?php else : ?>
+                        <p style="margin: 0; color: var(--text-secondary);">
+                            <?php _e('We need your Donation ID to accept a receipt. Please open this page using the QR link from your confirmation page.', 'kilismile'); ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <!-- What Happens Next Section -->
     <section class="next-steps" style="padding: 80px 0; background: white;">
@@ -319,6 +480,54 @@ document.addEventListener('DOMContentLoaded', function() {
         card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         observer.observe(card);
     });
+
+    const receiptForm = document.getElementById('manual-receipt-form');
+    if (receiptForm) {
+        receiptForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const statusEl = receiptForm.querySelector('.receipt-upload-status');
+            const submitBtn = receiptForm.querySelector('button[type="submit"]');
+            const donationId = receiptForm.querySelector('input[name="donation_id"]').value.trim();
+            const reference = receiptForm.querySelector('input[name="receipt_reference"]').value.trim();
+
+            if (!donationId || !reference) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = '<?php echo esc_js(__('Donation ID and receipt reference are required.', 'kilismile')); ?>';
+                return;
+            }
+
+            const formData = new FormData(receiptForm);
+            formData.append('action', 'kilismile_submit_manual_receipt');
+            formData.append('nonce', '<?php echo wp_create_nonce('kilismile_manual_receipt'); ?>');
+
+            statusEl.style.color = '#1f5f99';
+            statusEl.textContent = '<?php echo esc_js(__('Submitting receipt...', 'kilismile')); ?>';
+            if (submitBtn) submitBtn.disabled = true;
+
+            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusEl.style.color = '#28a745';
+                        statusEl.textContent = data.data.message || '<?php echo esc_js(__('Receipt submitted successfully.', 'kilismile')); ?>';
+                    } else {
+                        statusEl.style.color = '#dc3545';
+                        statusEl.textContent = (data.data && data.data.message) ? data.data.message : '<?php echo esc_js(__('Submission failed. Please try again.', 'kilismile')); ?>';
+                    }
+                })
+                .catch(() => {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = '<?php echo esc_js(__('Something went wrong. Please try again.', 'kilismile')); ?>';
+                })
+                .finally(() => {
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+        });
+    }
 });
 </script>
 
@@ -359,6 +568,15 @@ document.addEventListener('DOMContentLoaded', function() {
     .social-share-btn {
         font-size: 0.9rem !important;
         padding: 10px 15px !important;
+    }
+
+    .verification-section {
+        padding: 45px 0 !important;
+    }
+
+    .verification-section .qr-box img {
+        width: 180px !important;
+        height: 180px !important;
     }
 }
 </style>

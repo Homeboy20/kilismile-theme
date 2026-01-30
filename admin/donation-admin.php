@@ -26,6 +26,9 @@ class KiliSmile_Donation_Admin {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_init', array($this, 'handle_admin_actions'));
         add_action('wp_ajax_kilismile_test_azampay_token', array($this, 'ajax_test_azampay_token'));
+        add_action('wp_ajax_kilismile_admin_verify_manual_receipt', array($this, 'ajax_verify_manual_receipt'));
+        add_action('wp_ajax_kilismile_admin_get_donation_details', array($this, 'ajax_get_donation_details'));
+        add_action('wp_ajax_kilismile_admin_update_donation_status', array($this, 'ajax_update_donation_status'));
         
         // Initialize handlers (theme payment system is canonical)
         if (!class_exists('KiliSmile_Donation_Database') || !class_exists('KiliSmile_Donation_Email_Handler')) {
@@ -44,6 +47,138 @@ class KiliSmile_Donation_Admin {
 
         // Optional integration point (not required)
         $this->donation_system = null;
+    }
+
+    /**
+     * Admin AJAX: Verify manual transfer receipt
+     */
+    public function ajax_verify_manual_receipt() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'kilismile')));
+            return;
+        }
+
+        check_ajax_referer('kilismile_admin_nonce', 'nonce');
+
+        $donation_id = sanitize_text_field($_POST['donation_id'] ?? '');
+        if (empty($donation_id)) {
+            wp_send_json_error(array('message' => __('Donation ID is required.', 'kilismile')));
+            return;
+        }
+
+        if (!$this->db_handler) {
+            wp_send_json_error(array('message' => __('Donation database not available.', 'kilismile')));
+            return;
+        }
+
+        $donation = $this->db_handler->get_donation($donation_id);
+        if (empty($donation)) {
+            wp_send_json_error(array('message' => __('Donation not found.', 'kilismile')));
+            return;
+        }
+
+        if (!in_array($donation['payment_method'], array('manual_transfer', 'bank_transfer'), true)) {
+            wp_send_json_error(array('message' => __('Only manual transfers can be verified.', 'kilismile')));
+            return;
+        }
+
+        $receipt_ref = $this->db_handler->get_donation_meta($donation_id, 'manual_receipt_reference');
+        if (empty($receipt_ref)) {
+            wp_send_json_error(array('message' => __('Receipt reference not found for this donation.', 'kilismile')));
+            return;
+        }
+
+        $this->db_handler->update_donation_status($donation_id, 'completed', $receipt_ref);
+        $this->db_handler->update_donation_meta($donation_id, 'manual_receipt_verified_at', current_time('mysql'));
+        $this->db_handler->update_donation_meta($donation_id, 'manual_receipt_verified_by', get_current_user_id());
+
+        if ($this->email_handler) {
+            $this->email_handler->send_donation_receipt($donation, $receipt_ref);
+        }
+
+        wp_send_json_success(array('message' => __('Receipt verified and donation marked as completed.', 'kilismile')));
+    }
+
+    /**
+     * Admin AJAX: Fetch donation details
+     */
+    public function ajax_get_donation_details() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'kilismile')));
+            return;
+        }
+
+        check_ajax_referer('kilismile_admin_nonce', 'nonce');
+
+        $id = intval($_POST['donation_id'] ?? 0);
+        if ($id <= 0) {
+            wp_send_json_error(array('message' => __('Donation ID is required.', 'kilismile')));
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'donations';
+        $donation = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id), ARRAY_A);
+
+        if (empty($donation)) {
+            wp_send_json_error(array('message' => __('Donation not found.', 'kilismile')));
+            return;
+        }
+
+        if ($this->db_handler && !empty($donation['donation_id'])) {
+            $donation['receipt_reference'] = $this->db_handler->get_donation_meta($donation['donation_id'], 'manual_receipt_reference');
+            $donation['receipt_url'] = $this->db_handler->get_donation_meta($donation['donation_id'], 'manual_receipt_file_url');
+        }
+
+        wp_send_json_success($donation);
+    }
+
+    /**
+     * Admin AJAX: Update donation status
+     */
+    public function ajax_update_donation_status() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'kilismile')));
+            return;
+        }
+
+        check_ajax_referer('kilismile_admin_nonce', 'nonce');
+
+        $id = intval($_POST['donation_id'] ?? 0);
+        $new_status = sanitize_text_field($_POST['new_status'] ?? '');
+
+        if ($id <= 0 || empty($new_status)) {
+            wp_send_json_error(array('message' => __('Donation ID and status are required.', 'kilismile')));
+            return;
+        }
+
+        $allowed_statuses = array('pending', 'pending_verification', 'completed', 'failed', 'refunded');
+        if (!in_array($new_status, $allowed_statuses, true)) {
+            wp_send_json_error(array('message' => __('Invalid status value.', 'kilismile')));
+            return;
+        }
+
+        if (!$this->db_handler) {
+            wp_send_json_error(array('message' => __('Donation database not available.', 'kilismile')));
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'donations';
+        $donation = $wpdb->get_row($wpdb->prepare("SELECT donation_id FROM {$table} WHERE id = %d", $id), ARRAY_A);
+
+        if (empty($donation) || empty($donation['donation_id'])) {
+            wp_send_json_error(array('message' => __('Donation not found.', 'kilismile')));
+            return;
+        }
+
+        $updated = $this->db_handler->update_donation_status($donation['donation_id'], $new_status);
+        if (!$updated) {
+            wp_send_json_error(array('message' => __('Failed to update donation status.', 'kilismile')));
+            return;
+        }
+
+        wp_send_json_success(array('message' => __('Donation status updated successfully.', 'kilismile')));
     }
 
     /**
@@ -170,10 +305,10 @@ class KiliSmile_Donation_Admin {
         
         // Handle donation status updates
         if (isset($_POST['update_donation_status']) && wp_verify_nonce($_POST['_wpnonce'], 'update_donation_status')) {
-            $donation_id = intval($_POST['donation_id']);
+            $donation_id = sanitize_text_field($_POST['donation_id'] ?? '');
             $new_status = sanitize_text_field($_POST['new_status']);
             
-            if ($this->db_handler->update_donation_status($donation_id, $new_status)) {
+            if (!empty($donation_id) && $this->db_handler->update_donation_status($donation_id, $new_status)) {
                 add_action('admin_notices', function() {
                     echo '<div class="notice notice-success"><p>Donation status updated successfully.</p></div>';
                 });
@@ -274,6 +409,7 @@ class KiliSmile_Donation_Admin {
                             <th>Currency</th>
                             <th>Payment Method</th>
                             <th>Status</th>
+                            <th>Receipt Ref</th>
                             <th>Date</th>
                             <th>Actions</th>
                         </tr>
@@ -281,10 +417,18 @@ class KiliSmile_Donation_Admin {
                     <tbody>
                         <?php if (empty($donations)): ?>
                             <tr>
-                                <td colspan="8" style="text-align: center;">No donations found.</td>
+                                <td colspan="9" style="text-align: center;">No donations found.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($donations as $donation): ?>
+                                <?php
+                                    $receipt_ref = '';
+                                    $receipt_url = '';
+                                    if (!empty($donation->donation_id)) {
+                                        $receipt_ref = $this->db_handler->get_donation_meta($donation->donation_id, 'manual_receipt_reference');
+                                        $receipt_url = $this->db_handler->get_donation_meta($donation->donation_id, 'manual_receipt_file_url');
+                                    }
+                                ?>
                                 <tr>
                                     <td><?php echo esc_html($donation->id); ?></td>
                                     <td>
@@ -303,9 +447,22 @@ class KiliSmile_Donation_Admin {
                                             <?php echo esc_html(ucfirst($donation->status)); ?>
                                         </span>
                                     </td>
+                                    <td>
+                                        <?php if (!empty($receipt_ref)): ?>
+                                            <div style="font-weight: 600; font-size: 0.85rem;"><?php echo esc_html($receipt_ref); ?></div>
+                                            <?php if (!empty($receipt_url)): ?>
+                                                <a href="<?php echo esc_url($receipt_url); ?>" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem;">View</a>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span style="color: #999; font-size: 0.85rem;">—</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?php echo date('M j, Y H:i', strtotime($donation->created_at)); ?></td>
                                     <td>
                                         <a href="#" class="button button-small view-donation" data-id="<?php echo $donation->id; ?>">View</a>
+                                        <?php if (!empty($receipt_ref) && in_array($donation->payment_method, array('manual_transfer', 'bank_transfer'), true) && in_array($donation->status, array('pending', 'pending_verification'), true)): ?>
+                                            <button type="button" class="button button-small button-primary verify-receipt" data-donation-id="<?php echo esc_attr($donation->donation_id); ?>">Verify Receipt</button>
+                                        <?php endif; ?>
                                         <select class="status-update" data-id="<?php echo $donation->id; ?>">
                                             <option value="">Change Status</option>
                                             <option value="pending">Pending</option>
@@ -386,6 +543,7 @@ class KiliSmile_Donation_Admin {
      */
     public function payment_gateways_page() {
         $az_test_mode = get_option('kilismile_azampay_test_mode', 'yes') === 'yes';
+        $azampay_enabled = (bool) get_option('kilismile_azampay_enabled', true);
         $callback_url = home_url('/azampay/callback/');
 
         // Manual transfer settings (used by theme donation handler)
@@ -422,6 +580,15 @@ class KiliSmile_Donation_Admin {
                     <p>Official AzamPay Mobile Money integration (TZS). Supports Airtel, Tigo, Halopesa, Vodacom.</p>
 
                     <table class="form-table">
+                        <tr>
+                            <th scope="row">Enable AzamPay</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="azampay_enabled" value="1" <?php checked($azampay_enabled); ?>>
+                                    Enable AzamPay payments
+                                </label>
+                            </td>
+                        </tr>
                         <tr>
                             <th scope="row">Environment</th>
                             <td>
@@ -775,6 +942,7 @@ class KiliSmile_Donation_Admin {
 
         // AzamPay (theme canonical options)
         update_option('kilismile_azampay_test_mode', isset($data['azampay_test_mode']) ? 'yes' : 'no');
+        update_option('kilismile_azampay_enabled', isset($data['azampay_enabled']));
 
         update_option('kilismile_azampay_sandbox_app_name', sanitize_text_field($data['azampay_sandbox_app_name'] ?? 'KiliSmile-Sandbox'));
         update_option('kilismile_azampay_sandbox_client_id', sanitize_text_field($data['azampay_sandbox_client_id'] ?? ''));
@@ -792,7 +960,7 @@ class KiliSmile_Donation_Admin {
         update_option('kilismile_mpesa_number', sanitize_text_field($data['mpesa_number'] ?? ''));
 
         // Back-compat: keep old AzamPay option keys populated to avoid regressions in any legacy code.
-        update_option('kilismile_azampay_enabled', true);
+        update_option('kilismile_azampay_enabled', isset($data['azampay_enabled']));
         update_option('kilismile_azampay_app_name', sanitize_text_field($data['azampay_sandbox_app_name'] ?? $data['azampay_live_app_name'] ?? ''));
         update_option('kilismile_azampay_client_id', sanitize_text_field($data['azampay_sandbox_client_id'] ?? $data['azampay_live_client_id'] ?? ''));
         update_option('kilismile_azampay_client_secret', sanitize_text_field($data['azampay_sandbox_client_secret'] ?? $data['azampay_live_client_secret'] ?? ''));

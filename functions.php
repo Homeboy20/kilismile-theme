@@ -1,6 +1,6 @@
 <?php
 /**
- * Kilismile Organization Theme Functions
+ * Kili Smile Organization Theme Functions
  *
  * @package KiliSmile
  * @version 3.0.0
@@ -16,14 +16,6 @@ require_once get_template_directory() . '/includes/donation-database.php';
 require_once get_template_directory() . '/includes/donation-email-handler.php';
 require_once get_template_directory() . '/includes/settings-helpers.php';
 require_once get_template_directory() . '/includes/settings-compatibility.php';
-
-// Include payment processor for complete donation system
-require_once get_template_directory() . '/includes/payment-processor.php';
-
-// Include donation dashboard for admin management
-require_once get_template_directory() . '/includes/donation-dashboard.php';
-// Include program management helpers
-require_once get_template_directory() . '/includes/program-management.php';
 
 /**
  * Plugin Integration Hooks for External Payment Processors
@@ -46,54 +38,16 @@ function kilismile_get_donation_form($args = array()) {
         
         return '<div class="kilismile-donation-notice">
             <p>To enable donation processing, please install and activate a compatible payment plugin.</p>
-            <p>Supported plugins: KiliSmile Payments, WooCommerce, or other donation processing plugins.</p>
         </div>';
     }
     
     return $form;
 }
 
-// Provide backward compatibility function for templates
-if (!function_exists('kilismile_donation_form')) {
-    function kilismile_donation_form($args = array()) {
-        return kilismile_get_donation_form($args);
-    }
-}
-
-// Hook for plugins to add their own payment processing AJAX endpoints
-function kilismile_register_payment_ajax_hooks() {
-    do_action('kilismile_register_payment_hooks');
-}
-add_action('init', 'kilismile_register_payment_ajax_hooks');
-
-// Hook for plugins to enqueue their payment-related scripts
-function kilismile_enqueue_payment_scripts() {
-    if (is_page('donate') || is_page('donation') || is_page('donations')) {
-        do_action('kilismile_enqueue_payment_scripts');
-    }
-}
-add_action('wp_enqueue_scripts', 'kilismile_enqueue_payment_scripts', 20);
-
-// Corporate subscription hooks for external plugins
-function kilismile_get_corporate_subscription_form($args = array()) {
-    $form = apply_filters('kilismile_corporate_subscription_form', '', $args);
-    
-    if (empty($form)) {
-        return '<div class="kilismile-subscription-notice">
-            <p>Corporate subscription functionality requires a compatible payment plugin.</p>
-        </div>';
-    }
-    
-    return $form;
-}
-
-// Fallback AJAX handler when no payment plugin is active
-add_action('wp_ajax_kilismile_fallback_payment', 'kilismile_handle_fallback_payment');
-add_action('wp_ajax_nopriv_kilismile_fallback_payment', 'kilismile_handle_fallback_payment');
-
-function kilismile_handle_fallback_payment() {
+// Fallback donation processing when no payment plugin is active
+function kilismile_handle_donation_fallback() {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'], 'kilismile_donation_nonce')) {
+    if (!wp_verify_nonce($_POST['donation_nonce'] ?? '', 'kilismile_donation_nonce')) {
         wp_send_json_error(array(
             'message' => __('Security verification failed. Please refresh the page and try again.', 'kilismile')
         ));
@@ -5071,6 +5025,8 @@ require_once get_template_directory() . '/simple-donation-form.php';
  */
 add_action('wp_ajax_kilismile_process_donation', 'kilismile_handle_donation_ajax');
 add_action('wp_ajax_nopriv_kilismile_process_donation', 'kilismile_handle_donation_ajax');
+add_action('wp_ajax_kilismile_submit_manual_receipt', 'kilismile_submit_manual_receipt');
+add_action('wp_ajax_nopriv_kilismile_submit_manual_receipt', 'kilismile_submit_manual_receipt');
 
 function kilismile_handle_donation_ajax() {
     try {
@@ -5110,6 +5066,25 @@ function kilismile_handle_donation_ajax() {
     $donor_phone = sanitize_text_field($donation_data['donor_phone']);
     $payment_method = sanitize_text_field($donation_data['payment_method']);
     $anonymous = !empty($donation_data['anonymous_donation']);
+
+    $azampay_enabled = (bool) get_option('kilismile_azampay_enabled', true);
+    $paypal_enabled = (bool) get_option('kilismile_paypal_enabled', false);
+    $manual_enabled = (int) get_option('kilismile_local_bank_enabled', 1) === 1;
+
+    if ($payment_method === 'azampay' && !$azampay_enabled) {
+        wp_send_json_error(array('message' => 'AzamPay is currently disabled. Please choose another method.'));
+        return;
+    }
+
+    if ($payment_method === 'paypal' && !$paypal_enabled) {
+        wp_send_json_error(array('message' => 'PayPal is currently disabled. Please choose another method.'));
+        return;
+    }
+
+    if (($payment_method === 'manual_transfer' || $payment_method === 'bank_transfer') && !$manual_enabled) {
+        wp_send_json_error(array('message' => 'Manual transfer is currently disabled. Please choose another method.'));
+        return;
+    }
     
     // Validate amount
     if ($amount <= 0) {
@@ -5130,7 +5105,7 @@ function kilismile_handle_donation_ajax() {
     }
     
     // For now, simulate successful processing
-    $transaction_id = 'TEST_' . time() . '_' . rand(1000, 9999);
+    $transaction_id = 'KILISMILE_' . time() . '_' . rand(1000, 9999);
     
     // Log successful processing
     error_log("KiliSmile Donation: Processing successful - Transaction ID: {$transaction_id}");
@@ -5368,6 +5343,106 @@ KiliSmile Foundation Team
 }
 
 /**
+ * Submit manual transfer receipt for verification
+ */
+function kilismile_submit_manual_receipt() {
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'kilismile_manual_receipt')) {
+        wp_send_json_error(array('message' => 'Invalid security token.'));
+        return;
+    }
+
+    $donation_id = sanitize_text_field($_POST['donation_id'] ?? '');
+    $receipt_reference = sanitize_text_field($_POST['receipt_reference'] ?? '');
+
+    if (empty($donation_id) || empty($receipt_reference)) {
+        wp_send_json_error(array('message' => 'Donation ID and receipt reference are required.'));
+        return;
+    }
+
+    if (!class_exists('KiliSmile_Donation_Database')) {
+        wp_send_json_error(array('message' => 'Donation system not available.'));
+        return;
+    }
+
+    $db = new KiliSmile_Donation_Database();
+    $donation = $db->get_donation($donation_id);
+
+    if (empty($donation)) {
+        wp_send_json_error(array('message' => 'Donation not found.'));
+        return;
+    }
+
+    if (!in_array($donation['payment_method'], array('manual_transfer', 'bank_transfer'), true)) {
+        wp_send_json_error(array('message' => 'Receipt upload is only available for bank transfers.'));
+        return;
+    }
+
+    // Prevent duplicate receipt references
+    global $wpdb;
+    $meta_table = $wpdb->prefix . 'donation_meta';
+    $existing_reference = $wpdb->get_var($wpdb->prepare(
+        "SELECT donation_id FROM {$meta_table} WHERE meta_key = %s AND meta_value = %s AND donation_id != %s LIMIT 1",
+        'manual_receipt_reference',
+        $receipt_reference,
+        $donation_id
+    ));
+
+    if (!empty($existing_reference)) {
+        wp_send_json_error(array('message' => 'This receipt reference is already used. Please double-check your reference.'));
+        return;
+    }
+
+    $receipt_url = '';
+    if (!empty($_FILES['receipt_file']['name'])) {
+        if ($_FILES['receipt_file']['size'] > 5 * 1024 * 1024) {
+            wp_send_json_error(array('message' => 'Receipt file is too large. Maximum size is 5MB.'));
+            return;
+        }
+
+        $allowed_mimes = array(
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'pdf'  => 'application/pdf'
+        );
+
+        $filetype = wp_check_filetype_and_ext(
+            $_FILES['receipt_file']['tmp_name'],
+            $_FILES['receipt_file']['name'],
+            $allowed_mimes
+        );
+
+        if (empty($filetype['ext'])) {
+            wp_send_json_error(array('message' => 'Invalid file type. Allowed: JPG, PNG, PDF.'));
+            return;
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        $upload = wp_handle_upload($_FILES['receipt_file'], array('test_form' => false));
+
+        if (!empty($upload['error'])) {
+            wp_send_json_error(array('message' => 'Upload failed: ' . $upload['error']));
+            return;
+        }
+
+        $receipt_url = $upload['url'] ?? '';
+    }
+
+    $db->update_donation_meta($donation_id, 'manual_receipt_reference', $receipt_reference);
+    $db->update_donation_meta($donation_id, 'manual_receipt_file_url', $receipt_url);
+    $db->update_donation_meta($donation_id, 'manual_receipt_submitted_at', current_time('mysql'));
+
+    if (($donation['status'] ?? '') === 'pending_verification') {
+        $db->update_donation_status($donation_id, 'pending');
+    }
+
+    wp_send_json_success(array(
+        'message' => 'Receipt submitted successfully. We will verify and confirm your donation shortly.',
+        'receipt_url' => $receipt_url
+    ));
+}
+
+/**
  * AzamPay Integration Functions
  * Based on AzamPay API Documentation v1
  */
@@ -5497,7 +5572,7 @@ function kilismile_process_azampay_payment($payment_data) {
                 'success' => true,
                 'test_mode' => true,
                 'transaction_id' => $payment_data['external_id'],
-                'azampay_transaction_id' => 'TEST_AZAM_' . time(),
+                'azampay_transaction_id' => 'AZAM_' . time(),
                 'message' => 'Test mode: STK Push simulation sent'
             );
         } else {
@@ -5902,15 +5977,6 @@ function kilismile_handle_partnership_application() {
 add_action('admin_menu', 'kilismile_add_admin_menu_pages');
 
 function kilismile_add_admin_menu_pages() {
-    // AzamPay Settings
-    add_options_page(
-        'KiliSmile AzamPay Settings',
-        'AzamPay Settings',
-        'manage_options',
-        'kilismile-azampay-settings',
-        'kilismile_azampay_settings_page'
-    );
-    
     // Partnership Applications
     add_menu_page(
         'Partnership Applications',
@@ -6178,6 +6244,11 @@ function kilismile_partnership_applications_page() {
 }
 
 function kilismile_azampay_settings_page() {
+    if (current_user_can('manage_options')) {
+        wp_safe_redirect(admin_url('admin.php?page=kilismile-payment-gateways'));
+        exit;
+    }
+
     if (isset($_POST['submit'])) {
         // Save settings
         update_option('kilismile_azampay_test_mode', sanitize_text_field($_POST['test_mode']));
